@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventPay — Sistema de cobros cashless para eventos</title>
+<meta name="description" content="Gestioná el cobro en tus eventos con posnet, QR y efectivo. Dashboard en tiempo real. Integrado con Mercado Pago Point.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#7c6cf8;--ac2:#ede9fe;--dark:#0f0e17;--dark2:#1a1928;
+  --text:#1a1a1a;--muted:#666;--faint:#aaa;--bg:#f7f6f2;--white:#fff;
+  --green:#059669;--border:rgba(0,0,0,.1);--ra:12px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;color:var(--text);background:var(--white);font-size:15px;line-height:1.6}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 6%;height:62px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--text)}
+.nav-dot{width:9px;height:9px;border-radius:50%;background:var(--ac);flex-shrink:0}
+.nav-logo span{color:var(--ac)}
+.nav-links{display:flex;align-items:center;gap:26px}
+.nav-links a{text-decoration:none;color:var(--muted);font-size:14px;transition:color .15s}
+.nav-links a:hover{color:var(--text)}
+.nav-ctas{display:flex;align-items:center;gap:10px}
+.btn-ghost{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:13px;color:var(--text);text-decoration:none;transition:all .15s}
+.btn-ghost:hover{background:var(--bg)}
+.btn-cta{padding:8px 18px;border-radius:8px;border:none;background:var(--ac);color:#fff;cursor:pointer;font-size:13px;font-weight:500;text-decoration:none;transition:background .15s;display:inline-block}
+.btn-cta:hover{background:#6557e8}
+
+/* HERO */
+#hero{background:var(--dark);color:#fff;padding:96px 6% 72px;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,108,248,.15);border:1px solid rgba(124,108,248,.35);color:#c4bffc;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:500;margin-bottom:32px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(34px,6vw,64px);font-weight:700;line-height:1.08;letter-spacing:-2px;margin-bottom:22px;max-width:820px;margin-left:auto;margin-right:auto}
+h1 em{color:var(--ac);font-style:normal}
+.hero-sub{font-size:clamp(15px,2vw,19px);color:rgba(255,255,255,.6);max-width:540px;margin:0 auto 40px;line-height:1.6}
+.hero-ctas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:60px}
+.btn-hero{padding:14px 30px;border-radius:10px;background:var(--ac);color:#fff;font-size:15px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .15s;border:none;cursor:pointer}
+.btn-hero:hover{background:#6557e8;transform:translateY(-1px)}
+.btn-outline{padding:14px 28px;border-radius:10px;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:15px;text-decoration:none;transition:all .15s}
+.btn-outline:hover{background:rgba(255,255,255,.07)}
+
+/* MOCKUP */
+.mockup{max-width:800px;margin:0 auto;background:var(--dark2);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;box-shadow:0 48px 96px rgba(0,0,0,.6)}
+.mock-bar{background:#0f0e17;padding:11px 18px;display:flex;align-items:center;gap:7px}
+.mk{width:11px;height:11px;border-radius:50%}
+.mock-url{font-size:11px;color:rgba(255,255,255,.25);margin-left:10px}
+.mock-screen{padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:13px}
+.mk-label{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.mk-val{font-size:20px;font-weight:600;color:#fff}
+.mk-chart{margin:0 16px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:14px 14px 8px;display:flex;align-items:flex-end;gap:5px;height:72px}
+.mk-b{background:var(--ac);border-radius:3px 3px 0 0;flex:1;opacity:.75;transition:opacity .2s}
+.mk-b:hover{opacity:1}
+.mock-table{margin:0 16px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;overflow:hidden}
+.mk-row{display:flex;justify-content:space-between;padding:9px 14px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.04)}
+.mk-row:last-child{border:none}
+.mk-row-l{color:rgba(255,255,255,.5)}
+.mk-row-r{color:#fff;font-weight:500}
+
+/* STATS BAR */
+#stats{background:var(--ac);color:#fff;padding:30px 6%;display:flex;justify-content:center;gap:56px;flex-wrap:wrap;text-align:center}
+.stat-n{font-size:30px;font-weight:700;letter-spacing:-1px}
+.stat-l{font-size:12px;opacity:.75;margin-top:2px}
+
+/* SECTIONS */
+section{padding:84px 6%}
+.stag{font-size:11px;font-weight:600;color:var(--ac);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px}
+.stitle{font-size:clamp(26px,4vw,42px);font-weight:700;letter-spacing:-.8px;line-height:1.15;margin-bottom:14px}
+.ssub{font-size:16px;color:var(--muted);line-height:1.6;max-width:520px}
+.sh{margin-bottom:52px}
+.sh.c{text-align:center}.sh.c .ssub{margin:0 auto}
+
+/* FEATURES */
+#funciones{background:var(--bg)}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.feat{background:var(--white);border:1px solid var(--border);border-radius:var(--ra);padding:26px}
+.feat-ico{font-size:30px;margin-bottom:14px}
+.feat-t{font-size:15px;font-weight:600;margin-bottom:7px}
+.feat-d{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* HOW IT WORKS */
+#como-funciona{background:var(--white)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:36px}
+.step{text-align:center}
+.step-n{width:46px;height:46px;border-radius:50%;background:var(--ac2);color:var(--ac);font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.step-t{font-size:15px;font-weight:600;margin-bottom:7px}
+.step-d{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* PRICING */
+#precios{background:var(--bg)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;max-width:920px;margin:0 auto}
+.plan{background:var(--white);border:2px solid var(--border);border-radius:var(--ra);padding:30px;position:relative;display:flex;flex-direction:column}
+.plan.best{border-color:var(--ac);box-shadow:0 0 0 4px var(--ac2)}
+.plan-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--ac);color:#fff;font-size:11px;font-weight:600;padding:3px 14px;border-radius:12px;white-space:nowrap}
+.plan-name{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.plan-price{font-size:38px;font-weight:700;letter-spacing:-1.5px;margin-bottom:5px}
+.plan-price sup{font-size:18px;font-weight:500;vertical-align:top;margin-top:8px;display:inline-block}
+.plan-price small{font-size:14px;font-weight:400;color:var(--muted)}
+.plan-desc{font-size:13px;color:var(--muted);margin-bottom:22px;flex-grow:0;min-height:40px}
+.plan-list{list-style:none;margin-bottom:26px;flex:1}
+.plan-list li{font-size:13px;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.05);display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.plan-list li:last-child{border:none}
+.plan-list li::before{content:"✓";color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+.btn-plan{display:block;text-align:center;padding:12px;border-radius:8px;border:2px solid var(--ac);color:var(--ac);font-size:14px;font-weight:500;text-decoration:none;transition:all .15s;cursor:pointer;background:transparent}
+.plan.best .btn-plan,.btn-plan:hover{background:var(--ac);color:#fff}
+.plan.best .btn-plan:hover{background:#6557e8;border-color:#6557e8}
+
+/* FAQ */
+#faq{background:var(--white)}
+.faq-wrap{max-width:680px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border);padding:20px 0}
+.faq-q{font-size:15px;font-weight:500;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
+.faq-ico{color:var(--muted);transition:transform .2s;font-size:20px;flex-shrink:0}
+.faq-a{font-size:13px;color:var(--muted);margin-top:12px;display:none;line-height:1.7}
+.faq-item.open .faq-a{display:block}
+.faq-item.open .faq-ico{transform:rotate(180deg)}
+
+/* BOTTOM CTA */
+#bottom-cta{background:var(--dark);color:#fff;text-align:center;padding:88px 6%}
+#bottom-cta h2{font-size:clamp(26px,4vw,44px);font-weight:700;letter-spacing:-1px;margin-bottom:16px}
+#bottom-cta p{color:rgba(255,255,255,.55);font-size:16px;margin-bottom:36px}
+.trial-note{font-size:12px;color:rgba(255,255,255,.35);margin-top:16px}
+
+/* FOOTER */
+footer{background:#08070f;padding:42px 6%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-logo{font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px;text-decoration:none}
+.footer-logo span{color:var(--ac)}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.3)}
+.footer-links{display:flex;gap:22px}
+.footer-links a{font-size:13px;color:rgba(255,255,255,.35);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:#fff}
+
+@media(max-width:768px){
+  .nav-links{display:none}
+  #stats{gap:28px}
+  .mock-screen{grid-template-columns:1fr 1fr}
+  .mock-table{display:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="landing.html" class="nav-logo"><div class="nav-dot"></div>Event<span>Pay</span></a>
+  <div class="nav-links">
+    <a href="#funciones">Funciones</a>
+    <a href="#como-funciona">Cómo funciona</a>
+    <a href="#precios">Precios</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="nav-ctas">
+    <a href="login.html" class="btn-ghost">Iniciar sesión</a>
+    <a href="registro.html" class="btn-cta">Empezar gratis →</a>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-badge"><div class="live-dot"></div>Integrado con Mercado Pago Point</div>
+  <h1>Cobrá en tu evento.<br><em>Sin filas. Sin papel.</em></h1>
+  <p class="hero-sub">Sistema de punto de venta cashless con dashboard en tiempo real. Tarjeta, QR y efectivo desde el posnet.</p>
+  <div class="hero-ctas">
+    <a href="registro.html" class="btn-hero">Empezar gratis — 14 días →</a>
+    <a href="#como-funciona" class="btn-outline">Ver cómo funciona</a>
+  </div>
+  <div class="mockup">
+    <div class="mock-bar">
+      <div class="mk" style="background:#ff5f57"></div>
+      <div class="mk" style="background:#febc2e"></div>
+      <div class="mk" style="background:#28c840"></div>
+      <span class="mock-url">eventpay.app/admin — Dashboard en vivo</span>
+    </div>
+    <div class="mock-screen">
+      <div class="mk-card"><div class="mk-label">Recaudación</div><div class="mk-val">$284K</div></div>
+      <div class="mk-card"><div class="mk-label">Órdenes</div><div class="mk-val">138</div></div>
+      <div class="mk-card"><div class="mk-label">Cajeros</div><div class="mk-val">6</div></div>
+      <div class="mk-card"><div class="mk-label">Ticket prom.</div><div class="mk-val">$2.059</div></div>
+    </div>
+    <div class="mk-chart">
+      <div class="mk-b" style="height:35%"></div>
+      <div class="mk-b" style="height:55%"></div>
+      <div class="mk-b" style="height:70%"></div>
+      <div class="mk-b" style="height:48%"></div>
+      <div class="mk-b" style="height:88%"></div>
+      <div class="mk-b" style="height:65%"></div>
+      <div class="mk-b" style="height:100%"></div>
+      <div class="mk-b" style="height:80%"></div>
+      <div class="mk-b" style="height:92%"></div>
+    </div>
+    <div class="mock-table">
+      <div class="mk-row"><span class="mk-row-l">🥃 Fernet c/Coca × 3</span><span class="mk-row-r">$5.400</span></div>
+      <div class="mk-row"><span class="mk-row-l">🍺 Cerveza porrón × 2</span><span class="mk-row-r">$2.400</span></div>
+      <div class="mk-row"><span class="mk-row-l">⭐ Combo VIP</span><span class="mk-row-r">$4.500</span></div>
+    </div>
+  </div>
+</section>
+
+<div id="stats">
+  <div><div class="stat-n">+500</div><div class="stat-l">Eventos realizados</div></div>
+  <div><div class="stat-n">$12M+</div><div class="stat-l">Procesados</div></div>
+  <div><div class="stat-n">&lt; 1 seg</div><div class="stat-l">Sync en tiempo real</div></div>
+  <div><div class="stat-n">0 papel</div><div class="stat-l">100% digital</div></div>
+</div>
+
+<section id="funciones">
+  <div class="sh c">
+    <div class="stag">Funciones</div>
+    <div class="stitle">Todo lo que necesitás para<br>gestionar tus cobros</div>
+  </div>
+  <div class="feat-grid">
+    <div class="feat"><div class="feat-ico">📲</div><div class="feat-t">Integración Mercado Pago Point</div><div class="feat-d">Con un toque abrís la app nativa de MP en el posnet. El pago se procesa y el resultado vuelve automáticamente.</div></div>
+    <div class="feat"><div class="feat-ico">⚡</div><div class="feat-t">Dashboard en tiempo real</div><div class="feat-d">Cada venta aparece al instante desde tu celular o PC. Métricas por stand, cajero y producto sin refrescar.</div></div>
+    <div class="feat"><div class="feat-ico">🏪</div><div class="feat-t">Multi-stand y multi-cajero</div><div class="feat-d">Barras, foodtrucks y puestos ilimitados. Cada cajero tiene su turno, su caja y su historial independiente.</div></div>
+    <div class="feat"><div class="feat-ico">💳</div><div class="feat-t">4 medios de pago</div><div class="feat-d">Tarjeta, QR, efectivo y cobro combinado (parte efectivo + parte digital). El cajero elige según el cliente.</div></div>
+    <div class="feat"><div class="feat-ico">🖼️</div><div class="feat-t">Catálogo con imágenes</div><div class="feat-d">Cargá productos con foto, categoría, precio y promos. Los cambios aparecen en el posnet en menos de 1 segundo.</div></div>
+    <div class="feat"><div class="feat-ico">📊</div><div class="feat-t">Cierre de caja y reportes</div><div class="feat-d">Al cerrar el turno se genera el resumen con totales por medio de pago. Exportá las órdenes a CSV con un click.</div></div>
+  </div>
+</section>
+
+<section id="como-funciona">
+  <div class="sh c">
+    <div class="stag">Cómo funciona</div>
+    <div class="stitle">De cero al primer cobro<br>en menos de 30 minutos</div>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="step-n">1</div><div class="step-t">Creá tu cuenta</div><div class="step-d">Registrá tu empresa, elegí tu plan y configurá tu primer evento con productos y stands.</div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-t">Abrí en el posnet</div><div class="step-d">En el Point Smart abrís Chrome, escribís tu URL y lo instalás como app. Queda en la pantalla principal.</div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-t">El cajero entra al turno</div><div class="step-d">Escribe su nombre, selecciona el stand y empieza a operar. El catálogo se carga automáticamente.</div></div>
+    <div class="step"><div class="step-n">4</div><div class="step-t">Vos ves todo en vivo</div><div class="step-d">Desde tu celular o PC monitoreás cada venta al instante. Cerrá el turno cuando termine el evento.</div></div>
+  </div>
+</section>
+
+<section id="precios">
+  <div class="sh c">
+    <div class="stag">Precios</div>
+    <div class="stitle">Simple y transparente</div>
+    <div class="ssub">Empezá gratis 14 días. Sin tarjeta requerida.</div>
+  </div>
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price"><sup>USD </sup>29<small>/mes</small></div>
+      <div class="plan-desc">Para eventos puntuales y pequeños organizadores.</div>
+      <ul class="plan-list">
+        <li>Hasta 3 eventos por mes</li>
+        <li>5 terminales (posnet)</li>
+        <li>Dashboard en tiempo real</li>
+        <li>Catálogo con imágenes</li>
+        <li>Exportación CSV</li>
+        <li>Soporte por email</li>
+      </ul>
+      <a href="registro.html" class="btn-plan">Empezar gratis</a>
+    </div>
+    <div class="plan best">
+      <div class="plan-badge">⭐ Más elegido</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price"><sup>USD </sup>79<small>/mes</small></div>
+      <div class="plan-desc">Para productoras con eventos frecuentes.</div>
+      <ul class="plan-list">
+        <li>Eventos ilimitados</li>
+        <li>20 terminales</li>
+        <li>Todo lo de Starter</li>
+        <li>Analytics avanzado</li>
+        <li>Devoluciones y anulaciones</li>
+        <li>Soporte prioritario</li>
+      </ul>
+      <a href="registro.html" class="btn-plan">Empezar gratis</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price" style="font-size:26px;padding-top:6px;letter-spacing:-.5px">A convenir</div>
+      <div class="plan-desc">Para grandes organizaciones. También por comisión por transacción.</div>
+      <ul class="plan-list">
+        <li>Todo ilimitado</li>
+        <li>Modelo por comisión disponible</li>
+        <li>Integración personalizada</li>
+        <li>SLA garantizado</li>
+        <li>Soporte dedicado</li>
+        <li>Capacitación incluida</li>
+      </ul>
+      <a href="mailto:contacto@eventpay.app" class="btn-plan">Hablar con ventas</a>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:22px">También aceptamos pago mensual por transferencia bancaria / CBU.</p>
+</section>
+
+<section id="faq">
+  <div class="sh c">
+    <div class="stag">FAQ</div>
+    <div class="stitle">Preguntas frecuentes</div>
+  </div>
+  <div class="faq-wrap">
+    <div class="faq-item">
+      <div class="faq-q" onclick="faq(this)">¿Funciona con cualquier posnet de Mercado Pago?<span class="faq-ico">▾</span></div>
+      <div class="faq-a">EventPay está optimizado para el <strong>Mercado Pago Point Smart</strong> (el modelo con pantalla Android). Con ese dispositivo funciona al 100%. Los modelos sin pantalla (Point Mini, Point Plus) son lectores Bluetooth — en ese caso la app corre en un celular o tablet y el cobro va por el lector.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="faq(this)">¿Necesito saber programar o instalar algo?<span class="faq-ico">▾</span></div>
+      <div class="faq-a">No. EventPay es 100% web — corre en el browser del posnet sin instalar ninguna app desde la tienda. La única configuración es abrir la URL en Chrome y agregarla a la pantalla de inicio (PWA). Te guiamos paso a paso al registrarte.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="faq(this)">¿Los datos de mis clientes son seguros?<span class="faq-ico">▾</span></div>
+      <div class="faq-a">Sí. Todos los datos se almacenan en <strong>Supabase</strong> (PostgreSQL en la nube) con encriptación y aislamiento por cliente. Cada organización solo puede ver sus propios datos. Los pagos los procesa directamente Mercado Pago — nosotros nunca accedemos a datos de tarjetas.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="faq(this)">¿Qué pasa si no hay internet en el venue?<span class="faq-ico">▾</span></div>
+      <div class="faq-a">EventPay requiere conexión para sincronizar en tiempo real. Recomendamos tener datos móviles (4G) como backup al WiFi del venue. La app de Mercado Pago también necesita conexión para procesar pagos con tarjeta.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="faq(this)">¿Puedo cancelar en cualquier momento?<span class="faq-ico">▾</span></div>
+      <div class="faq-a">Sí, sin penalidades. Si cancelás, tu cuenta queda activa hasta el fin del período ya abonado. Podés exportar todos tus datos en CSV antes de cancelar.</div>
+    </div>
+  </div>
+</section>
+
+<section id="bottom-cta">
+  <h2>¿Listo para tu próximo evento?</h2>
+  <p>14 días gratis. Sin tarjeta. Sin complicaciones.</p>
+  <a href="registro.html" class="btn-hero">Crear mi cuenta gratis →</a>
+  <div class="trial-note">Sin compromiso · Cancelá cuando quieras · Soporte en español</div>
+</section>
+
+<footer>
+  <a href="landing.html" class="footer-logo"><div class="nav-dot"></div>Event<span>Pay</span></a>
+  <div class="footer-copy">© 2025 EventPay. Todos los derechos reservados.</div>
+  <div class="footer-links">
+    <a href="login.html">Ingresar</a>
+    <a href="registro.html">Registrarse</a>
+    <a href="mailto:contacto@eventpay.app">Contacto</a>
+  </div>
+</footer>
+
+<script>
+function faq(el){ el.parentElement.classList.toggle('open'); }
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'});}
+  });
+});
+</script>
+</body>
+</html>

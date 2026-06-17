@@ -4,61 +4,78 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EventPay — Acceso Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f5f4f0;--bg2:#fff;--border:rgba(0,0,0,.1);
-  --text:#1a1a1a;--muted:#666;--accent:#7c6cf8;
-  --red:#dc2626;--radius:12px;--rsm:8px;
-}
+:root{--bg:#f5f4f0;--bg2:#fff;--border:rgba(0,0,0,.1);--text:#1a1a1a;--muted:#666;--ac:#7c6cf8;--red:#dc2626;--ra:12px}
 body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
 .wrap{width:100%;max-width:380px;padding:20px}
-.box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.07)}
-.logo{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
-.logo span{color:var(--accent)}
-.logo-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:6px}
-.sub{font-size:13px;color:var(--muted);margin-bottom:32px}
-.field{position:relative;margin-bottom:14px}
-.field input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;transition:border .15s;color:var(--text);background:var(--bg2)}
-.field input:focus{border-color:var(--accent)}
-.btn{width:100%;padding:11px;border-radius:var(--rsm);border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;margin-top:4px}
+.box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--ra);padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.logo{font-size:24px;font-weight:700;text-align:center;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--ac)}
+.logo span{color:var(--ac)}
+.sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.fi{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border .15s;color:var(--text);background:var(--bg2)}
+.fi:focus{border-color:var(--ac)}
+.btn{width:100%;padding:12px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;margin-top:4px}
 .btn:hover{background:#6557e8}
-.btn:active{transform:scale(.99)}
-.error{font-size:12px;color:var(--red);margin-top:10px;min-height:18px}
-.footer{font-size:11px;color:var(--muted);margin-top:28px}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.err{font-size:12px;color:var(--red);margin-top:10px;text-align:center;min-height:18px}
+.footer{text-align:center;margin-top:20px;font-size:12px;color:var(--muted)}
+.footer a{color:var(--ac);text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="box">
-    <div class="logo"><span class="logo-dot"></span>Event<span>Pay</span></div>
+    <div class="logo"><div class="logo-dot"></div>Event<span>Pay</span></div>
     <div class="sub">Panel de administración</div>
-    <div class="field">
-      <input type="password" id="pwd" placeholder="Contraseña" autocomplete="current-password" autofocus>
+    <div class="fg">
+      <label>Email</label>
+      <input class="fi" type="email" id="email" placeholder="vos@empresa.com" autofocus>
     </div>
-    <button class="btn" onclick="login()">Ingresar</button>
-    <div class="error" id="err"></div>
-    <div class="footer">Solo para administradores del evento</div>
+    <div class="fg">
+      <label>Contraseña</label>
+      <input class="fi" type="password" id="pass" placeholder="Tu contraseña">
+    </div>
+    <button class="btn" id="btn-login" onclick="login()">Ingresar</button>
+    <div class="err" id="err"></div>
+    <div class="footer">¿No tenés cuenta? <a href="registro.html">Registrate gratis</a></div>
   </div>
 </div>
 <script>
-if (sessionStorage.getItem('ep_admin') === 'ok') location.href = 'admin.html';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.getElementById('pwd').addEventListener('keydown', e => {
-  if (e.key === 'Enter') login();
+// Si ya hay sesión activa, redirigir directamente
+sb.auth.getSession().then(({ data: { session } }) => {
+  if(session) redirect(session.user.email);
 });
 
-function login() {
-  const pwd = document.getElementById('pwd').value;
-  if (pwd === ADMIN_PASSWORD) {
-    sessionStorage.setItem('ep_admin', 'ok');
-    location.href = 'admin.html';
-  } else {
-    document.getElementById('err').textContent = 'Contraseña incorrecta. Intentá de nuevo.';
-    document.getElementById('pwd').value = '';
-    document.getElementById('pwd').focus();
+document.getElementById('pass').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value;
+  const btn   = document.getElementById('btn-login');
+  const err   = document.getElementById('err');
+  err.textContent = '';
+  if(!email || !pass){ err.textContent = 'Completá email y contraseña.'; return; }
+  btn.disabled = true; btn.textContent = 'Ingresando…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    err.textContent = error.message.includes('Invalid') ? 'Email o contraseña incorrectos.' : error.message;
+    return;
   }
+  redirect(data.user.email);
+}
+
+function redirect(email){
+  if(email === SUPER_ADMIN_EMAIL) location.href = 'superadmin.html';
+  else location.href = 'admin.html';
 }
 </script>
 </body>

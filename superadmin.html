@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventPay — Super Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--bg2:#fff;--bg3:#eeecea;--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.18);
+  --text:#1a1a1a;--muted:#666;--faint:#aaa;
+  --ac:#7c6cf8;--ac2:#ede9fe;
+  --green:#059669;--green-bg:#d1fae5;
+  --amber:#b45309;--amber-bg:#fef3c7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --ra:10px;--rsm:7px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--ac)}
+.logo span{color:var(--ac)}
+.super-chip{background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.main{padding:24px;max-width:1100px;margin:0 auto}
+.page-title{font-size:20px;font-weight:600;margin-bottom:20px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--ra);padding:16px}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.metric-value{font-size:26px;font-weight:600}
+.metric-sub{font-size:11px;color:var(--faint);margin-top:2px}
+
+/* CARD / TABLE */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--ra);padding:18px 20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:500}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:500;color:var(--muted);text-align:left;padding:8px 0;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px}
+td{font-size:13px;padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:var(--bg)}
+
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:500}
+.chip-green{background:var(--green-bg);color:var(--green)}
+.chip-amber{background:var(--amber-bg);color:var(--amber)}
+.chip-red{background:var(--red-bg);color:var(--red)}
+.chip-blue{background:var(--ac2);color:var(--ac)}
+.chip-gray{background:var(--bg3);color:var(--muted)}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:var(--bg3)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-primary{background:var(--ac);color:#fff;border-color:var(--ac)}
+.btn-primary:hover{background:#6557e8}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-danger:hover{background:#b91c1c}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border-radius:var(--ra);padding:24px;width:480px;max-width:95vw}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.form-group label{font-size:12px;color:var(--muted)}
+.form-input{padding:8px 10px;border-radius:var(--rsm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none;transition:border .15s;width:100%}
+.form-input:focus{border-color:var(--ac)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:300;transform:translateY(60px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* LOGIN SCREEN */
+#sa-login{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
+#sa-login.hidden{display:none}
+.sa-login-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:36px 32px;width:360px;text-align:center}
+.sa-login-title{font-size:18px;font-weight:600;margin-bottom:6px}
+.sa-login-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.sa-login-err{font-size:12px;color:var(--red);margin-top:8px;min-height:16px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="sa-login">
+  <div class="sa-login-box">
+    <div style="font-size:32px;margin-bottom:12px">🔐</div>
+    <div class="sa-login-title">Super Admin</div>
+    <div class="sa-login-sub">Solo para administradores de EventPay</div>
+    <div class="form-group">
+      <input class="form-input" type="email" id="sa-email" placeholder="Email">
+    </div>
+    <div class="form-group">
+      <input class="form-input" type="password" id="sa-pass" placeholder="Contraseña">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saLogin()">Ingresar</button>
+    <div class="sa-login-err" id="sa-err"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>Event<span>Pay</span><span class="super-chip">SUPER ADMIN</span></div>
+  <button class="btn btn-sm" onclick="saLogout()">Cerrar sesión</button>
+</div>
+
+<div class="main">
+  <div class="page-title">Panel de clientes</div>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Total clientes</div><div class="metric-value" id="m-total">—</div></div>
+    <div class="metric"><div class="metric-label">Activos</div><div class="metric-value" id="m-activos">—</div></div>
+    <div class="metric"><div class="metric-label">En trial</div><div class="metric-value" id="m-trial">—</div></div>
+    <div class="metric"><div class="metric-label">Suspendidos</div><div class="metric-value" id="m-susp">—</div></div>
+    <div class="metric"><div class="metric-label">MRR estimado</div><div class="metric-value" id="m-mrr">—</div><div class="metric-sub">USD/mes</div></div>
+  </div>
+
+  <!-- CLIENTES TABLE -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Clientes registrados</span>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="search" placeholder="Buscar..." style="max-width:200px" oninput="filterTable()">
+        <button class="btn btn-primary btn-sm" onclick="openModalOrg()">+ Nuevo cliente</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Email</th>
+          <th>Slug / URL</th>
+          <th>Plan</th>
+          <th>Estado</th>
+          <th>Trial hasta</th>
+          <th>MRR</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="orgs-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL: Org -->
+<div class="modal-bg" id="modal-org">
+  <div class="modal">
+    <div class="modal-title" id="morg-title">Nuevo cliente</div>
+    <div class="form-group"><label>Nombre empresa</label><input class="form-input" id="fo-nombre"></div>
+    <div class="form-group"><label>Email</label><input class="form-input" type="email" id="fo-email"></div>
+    <div class="form-group"><label>Slug (URL del cajero)</label><input class="form-input" id="fo-slug" placeholder="mi-empresa"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Plan</label>
+        <select class="form-input" id="fo-plan">
+          <option value="trial">Trial</option>
+          <option value="starter">Starter</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Estado</label>
+        <select class="form-input" id="fo-estado">
+          <option value="trial">Trial</option>
+          <option value="activo">Activo</option>
+          <option value="suspendido">Suspendido</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Trial hasta</label><input class="form-input" type="date" id="fo-trial"></div>
+      <div class="form-group"><label>Precio mensual (USD)</label><input class="form-input" type="number" id="fo-precio" placeholder="29"></div>
+    </div>
+    <div class="form-group"><label>Comisión % (Enterprise)</label><input class="form-input" type="number" id="fo-comision" placeholder="0" step="0.1"></div>
+    <div class="form-group"><label>Notas internas</label><input class="form-input" id="fo-notas" placeholder="Ej: Paga por CBU los 10 de cada mes"></div>
+    <input type="hidden" id="fo-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-org')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOrg()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let orgs = [];
+
+// ── Auth ──
+async function saLogin(){
+  const email = document.getElementById('sa-email').value.trim();
+  const pass  = document.getElementById('sa-pass').value;
+  document.getElementById('sa-err').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){ document.getElementById('sa-err').textContent = 'Credenciales incorrectas'; return; }
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session?.user?.email !== SUPER_ADMIN_EMAIL){
+    await sb.auth.signOut();
+    document.getElementById('sa-err').textContent = 'No tenés acceso de super admin.';
+    return;
+  }
+  document.getElementById('sa-login').classList.add('hidden');
+  init();
+}
+async function saLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+document.getElementById('sa-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') saLogin(); });
+
+async function checkAuth(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session?.user?.email === SUPER_ADMIN_EMAIL){
+    document.getElementById('sa-login').classList.add('hidden');
+    init();
+  }
+}
+checkAuth();
+
+// ── Init ──
+async function init(){
+  const { data } = await sb.from('organizations').select('*').order('created_at',{ascending:false});
+  orgs = data || [];
+  renderMetrics();
+  renderTable(orgs);
+}
+
+function renderMetrics(){
+  const total   = orgs.length;
+  const activos = orgs.filter(o=>o.estado==='activo').length;
+  const trial   = orgs.filter(o=>o.estado==='trial').length;
+  const susp    = orgs.filter(o=>o.estado==='suspendido').length;
+  const mrr     = orgs.filter(o=>o.estado==='activo').reduce((s,o)=>s+(o.precio_mensual||0),0);
+  document.getElementById('m-total').textContent   = total;
+  document.getElementById('m-activos').textContent = activos;
+  document.getElementById('m-trial').textContent   = trial;
+  document.getElementById('m-susp').textContent    = susp;
+  document.getElementById('m-mrr').textContent     = 'USD ' + mrr.toFixed(0);
+}
+
+function renderTable(list){
+  const appBase = window.location.origin + window.location.pathname.replace('superadmin.html','');
+  document.getElementById('orgs-table').innerHTML = list.map(o=>{
+    const estadoChip = {
+      activo:    'chip-green',
+      trial:     'chip-blue',
+      suspendido:'chip-amber',
+      cancelado: 'chip-red',
+    }[o.estado] || 'chip-gray';
+    const planChip = {starter:'chip-gray',pro:'chip-blue',enterprise:'chip-amber',trial:'chip-gray'}[o.plan]||'chip-gray';
+    const trialDate = o.trial_hasta ? new Date(o.trial_hasta+'T12:00').toLocaleDateString('es-AR') : '—';
+    return `<tr>
+      <td><strong>${o.nombre}</strong></td>
+      <td style="color:var(--muted)">${o.email}</td>
+      <td><code style="font-size:11px;color:var(--ac)">${o.slug}</code></td>
+      <td><span class="chip ${planChip}">${o.plan}</span></td>
+      <td><span class="chip ${estadoChip}">${o.estado}</span></td>
+      <td style="color:var(--muted)">${trialDate}</td>
+      <td>${o.precio_mensual ? 'USD '+o.precio_mensual : o.comision_pct ? o.comision_pct+'%' : '—'}</td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick='editOrg(${JSON.stringify(o).replace(/'/g,"&#39;")})'>Editar</button>
+          ${o.estado==='suspendido'
+            ? `<button class="btn btn-sm btn-green" onclick="setEstado('${o.id}','activo')">Activar</button>`
+            : o.estado==='activo'||o.estado==='trial'
+            ? `<button class="btn btn-sm btn-danger" onclick="setEstado('${o.id}','suspendido')">Suspender</button>`
+            : ''}
+          <a class="btn btn-sm" href="${appBase}cajero.html?org=${o.slug}" target="_blank" style="text-decoration:none">Cajero ↗</a>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="color:var(--muted);padding:16px 0;text-align:center">No hay clientes registrados aún</td></tr>';
+}
+
+function filterTable(){
+  const q = document.getElementById('search').value.toLowerCase();
+  renderTable(orgs.filter(o => o.nombre.toLowerCase().includes(q) || o.email.toLowerCase().includes(q) || o.slug.toLowerCase().includes(q)));
+}
+
+// ── CRUD Orgs ──
+function openModalOrg(){
+  document.getElementById('morg-title').textContent = 'Nuevo cliente';
+  ['fo-nombre','fo-email','fo-slug','fo-notas','fo-id'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fo-plan').value   = 'trial';
+  document.getElementById('fo-estado').value = 'trial';
+  document.getElementById('fo-precio').value = '';
+  document.getElementById('fo-comision').value = '0';
+  document.getElementById('fo-trial').value = new Date(Date.now()+14*24*60*60*1000).toISOString().split('T')[0];
+  openModal('modal-org');
+}
+function editOrg(o){
+  document.getElementById('morg-title').textContent = 'Editar cliente';
+  document.getElementById('fo-id').value      = o.id;
+  document.getElementById('fo-nombre').value  = o.nombre;
+  document.getElementById('fo-email').value   = o.email;
+  document.getElementById('fo-slug').value    = o.slug;
+  document.getElementById('fo-plan').value    = o.plan;
+  document.getElementById('fo-estado').value  = o.estado;
+  document.getElementById('fo-trial').value   = o.trial_hasta||'';
+  document.getElementById('fo-precio').value  = o.precio_mensual||'';
+  document.getElementById('fo-comision').value= o.comision_pct||'0';
+  document.getElementById('fo-notas').value   = o.notas||'';
+  openModal('modal-org');
+}
+async function saveOrg(){
+  const id = document.getElementById('fo-id').value;
+  const data = {
+    nombre:       document.getElementById('fo-nombre').value.trim(),
+    email:        document.getElementById('fo-email').value.trim(),
+    slug:         document.getElementById('fo-slug').value.trim().toLowerCase(),
+    plan:         document.getElementById('fo-plan').value,
+    estado:       document.getElementById('fo-estado').value,
+    trial_hasta:  document.getElementById('fo-trial').value || null,
+    precio_mensual: parseFloat(document.getElementById('fo-precio').value)||0,
+    comision_pct:   parseFloat(document.getElementById('fo-comision').value)||0,
+    notas:          document.getElementById('fo-notas').value.trim()||null,
+  };
+  if(!data.nombre||!data.email||!data.slug){ toast('Completá nombre, email y slug'); return; }
+  if(id) await sb.from('organizations').update(data).eq('id',id);
+  else   await sb.from('organizations').insert(data);
+  closeModal('modal-org');
+  toast('✓ Cliente guardado');
+  init();
+}
+async function setEstado(id, estado){
+  await sb.from('organizations').update({estado}).eq('id',id);
+  toast('✓ Estado actualizado');
+  init();
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>

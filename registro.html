@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventPay — Crear cuenta</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#7c6cf8;--ac2:#ede9fe;--bg:#f7f6f2;--white:#fff;
+  --text:#1a1a1a;--muted:#666;--faint:#aaa;--border:rgba(0,0,0,.1);
+  --red:#dc2626;--green:#059669;--green-bg:#d1fae5;--ra:12px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.wrap{max-width:520px;margin:0 auto;padding:32px 20px 60px}
+
+/* HEADER */
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px}
+.logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--text)}
+.logo-dot{width:9px;height:9px;border-radius:50%;background:var(--ac)}
+.logo span{color:var(--ac)}
+.login-link{font-size:13px;color:var(--muted);text-decoration:none}
+.login-link:hover{color:var(--text)}
+
+/* STEPS INDICATOR */
+.steps-bar{display:flex;align-items:center;gap:0;margin-bottom:36px}
+.step-item{display:flex;align-items:center;flex:1}
+.step-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--white);color:var(--faint);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.step-circle.active{border-color:var(--ac);background:var(--ac);color:#fff}
+.step-circle.done{border-color:var(--ac);background:var(--ac);color:#fff}
+.step-label{font-size:11px;color:var(--faint);margin-left:8px;white-space:nowrap;transition:color .2s}
+.step-label.active{color:var(--text);font-weight:500}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 8px;transition:background .2s}
+.step-line.done{background:var(--ac)}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--ra);padding:32px}
+.card-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.card-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* FORM */
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.fi{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:var(--white);outline:none;transition:border .15s}
+.fi:focus{border-color:var(--ac)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:11px;color:var(--faint);margin-top:4px}
+.err{font-size:12px;color:var(--red);margin-top:6px;display:none}
+.err.show{display:block}
+
+/* PLAN CARDS */
+.plan-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+.plan-opt{border:2px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;gap:12px}
+.plan-opt:hover{border-color:var(--ac)}
+.plan-opt.selected{border-color:var(--ac);background:var(--ac2)}
+.plan-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.plan-opt.selected .plan-radio{border-color:var(--ac);background:var(--ac)}
+.plan-radio-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:none}
+.plan-opt.selected .plan-radio-dot{display:block}
+.plan-info{flex:1}
+.plan-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.plan-price-sm{font-size:13px;color:var(--muted)}
+.plan-price-sm strong{color:var(--text)}
+.plan-features-sm{font-size:12px;color:var(--muted);margin-top:4px}
+.trial-chip{display:inline-block;background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;margin-left:6px}
+
+/* PAYMENT */
+.pay-method{display:flex;gap:10px;margin-bottom:20px}
+.pay-opt{flex:1;border:2px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;text-align:center;transition:all .15s}
+.pay-opt:hover{border-color:var(--ac)}
+.pay-opt.selected{border-color:var(--ac);background:var(--ac2)}
+.pay-ico{font-size:22px;margin-bottom:6px}
+.pay-label{font-size:12px;font-weight:500}
+.pay-detail{background:var(--bg);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;display:none}
+.pay-detail.show{display:block}
+
+/* BUTTONS */
+.btn-main{width:100%;padding:13px;border-radius:8px;background:var(--ac);color:#fff;border:none;font-size:15px;font-weight:500;cursor:pointer;transition:background .15s;margin-top:8px}
+.btn-main:hover{background:#6557e8}
+.btn-main:disabled{opacity:.6;cursor:not-allowed}
+.btn-back{background:transparent;border:1px solid var(--border);color:var(--muted);width:100%;padding:11px;border-radius:8px;font-size:14px;cursor:pointer;transition:all .15s;margin-top:8px}
+.btn-back:hover{background:var(--bg)}
+
+/* SUCCESS */
+.success-ico{font-size:56px;text-align:center;margin-bottom:16px}
+.success-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.6}
+.next-steps{background:var(--bg);border-radius:10px;padding:20px}
+.next-step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.next-step:last-child{border:none}
+.ns-num{width:24px;height:24px;border-radius:50%;background:var(--ac);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ns-text{font-size:13px;line-height:1.5}
+.ns-text strong{display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a href="landing.html" class="logo"><div class="logo-dot"></div>Event<span>Pay</span></a>
+    <a href="login.html" class="login-link">¿Ya tenés cuenta? Iniciá sesión →</a>
+  </div>
+
+  <!-- STEPS BAR -->
+  <div class="steps-bar" id="steps-bar">
+    <div class="step-item">
+      <div class="step-circle active" id="sc1">1</div>
+      <span class="step-label active" id="sl1">Tu empresa</span>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc2">2</div>
+      <span class="step-label" id="sl2">Tu plan</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc3">3</div>
+      <span class="step-label" id="sl3">Pago</span>
+    </div>
+    <div class="step-line" id="line3"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc4">4</div>
+      <span class="step-label" id="sl4">¡Listo!</span>
+    </div>
+  </div>
+
+  <!-- STEP 1: EMPRESA -->
+  <div id="step1" class="card">
+    <div class="card-title">Datos de tu empresa</div>
+    <div class="card-sub">Con esto creamos tu espacio en EventPay. 14 días de prueba gratis.</div>
+    <div class="fg">
+      <label>Nombre de tu empresa / productora</label>
+      <input class="fi" type="text" id="r-empresa" placeholder="Ej: Productora Norte SA">
+    </div>
+    <div class="fg">
+      <label>Tu email</label>
+      <input class="fi" type="email" id="r-email" placeholder="vos@empresa.com">
+    </div>
+    <div class="row-2">
+      <div class="fg">
+        <label>Contraseña</label>
+        <input class="fi" type="password" id="r-pass" placeholder="Mín. 8 caracteres">
+      </div>
+      <div class="fg">
+        <label>Repetir contraseña</label>
+        <input class="fi" type="password" id="r-pass2" placeholder="Repetí la contraseña">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Slug de tu cuenta <span style="color:var(--faint);font-weight:400">(para la URL del cajero)</span></label>
+      <input class="fi" type="text" id="r-slug" placeholder="mi-empresa" style="text-transform:lowercase">
+      <div class="hint">Solo letras, números y guiones. Ej: <strong id="slug-preview">mi-empresa</strong></div>
+    </div>
+    <div class="err" id="err1"></div>
+    <button class="btn-main" onclick="step1Next()">Continuar →</button>
+  </div>
+
+  <!-- STEP 2: PLAN -->
+  <div id="step2" class="card" style="display:none">
+    <div class="card-title">Elegí tu plan</div>
+    <div class="card-sub">Todos los planes incluyen 14 días de prueba gratis.</div>
+    <div class="plan-grid">
+      <div class="plan-opt selected" id="plan-starter" onclick="selectPlan('starter',this)">
+        <div class="plan-radio"><div class="plan-radio-dot"></div></div>
+        <div class="plan-info">
+          <div class="plan-name">Starter <span class="trial-chip">14 días gratis</span></div>
+          <div class="plan-price-sm"><strong>USD 29</strong>/mes después del trial</div>
+          <div class="plan-features-sm">Hasta 3 eventos · 5 terminales · Dashboard en vivo</div>
+        </div>
+      </div>
+      <div class="plan-opt" id="plan-pro" onclick="selectPlan('pro',this)">
+        <div class="plan-radio"><div class="plan-radio-dot"></div></div>
+        <div class="plan-info">
+          <div class="plan-name">Pro <span class="trial-chip">14 días gratis</span></div>
+          <div class="plan-price-sm"><strong>USD 79</strong>/mes después del trial</div>
+          <div class="plan-features-sm">Eventos ilimitados · 20 terminales · Analytics avanzado</div>
+        </div>
+      </div>
+      <div class="plan-opt" id="plan-enterprise" onclick="selectPlan('enterprise',this)">
+        <div class="plan-radio"><div class="plan-radio-dot"></div></div>
+        <div class="plan-info">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price-sm"><strong>A convenir</strong> · También por comisión</div>
+          <div class="plan-features-sm">Todo ilimitado · Integración personalizada · Soporte dedicado</div>
+        </div>
+      </div>
+    </div>
+    <div class="err" id="err2"></div>
+    <button class="btn-main" onclick="step2Next()">Continuar →</button>
+    <button class="btn-back" onclick="goStep(1)">← Volver</button>
+  </div>
+
+  <!-- STEP 3: PAGO -->
+  <div id="step3" class="card" style="display:none">
+    <div class="card-title" id="s3-title">Información de pago</div>
+    <div class="card-sub" id="s3-sub">Elegí cómo preferís pagar cuando termine el período de prueba.</div>
+    <div class="pay-method" id="pay-method-sel">
+      <div class="pay-opt selected" id="pay-mp" onclick="selectPay('mp',this)">
+        <div class="pay-ico">📲</div>
+        <div class="pay-label">Mercado Pago</div>
+      </div>
+      <div class="pay-opt" id="pay-cbu" onclick="selectPay('cbu',this)">
+        <div class="pay-ico">🏦</div>
+        <div class="pay-label">Transferencia / CBU</div>
+      </div>
+    </div>
+    <div class="pay-detail show" id="detail-mp">
+      <strong>Suscripción automática con Mercado Pago</strong><br>
+      Cuando termine tu prueba gratuita, te enviaremos el link de pago de MP para activar el débito automático mensual.
+      <br><br>
+      No te cobraremos nada ahora. Seguí con el registro.
+    </div>
+    <div class="pay-detail" id="detail-cbu">
+      <strong>Pago manual por transferencia</strong><br>
+      Al terminar el trial te enviamos un email con los datos bancarios para realizar la transferencia.
+      Tu cuenta se activa cuando recibimos el pago (24-48hs hábiles).<br><br>
+      <strong>Alias:</strong> EVENTPAY.COBROS<br>
+      <strong>Banco:</strong> Te lo enviamos por email al finalizar el trial.
+    </div>
+    <div id="enterprise-msg" style="display:none;background:var(--bg);border-radius:10px;padding:16px;font-size:13px;line-height:1.7">
+      Para el plan Enterprise coordinamos la integración personalizada y el modelo de precios directamente con vos.<br><br>
+      Al registrarte, nuestro equipo se pondrá en contacto en las próximas 24hs hábiles.
+    </div>
+    <div class="err" id="err3"></div>
+    <button class="btn-main" id="btn-step3" onclick="step3Next()">Crear mi cuenta →</button>
+    <button class="btn-back" onclick="goStep(2)">← Volver</button>
+  </div>
+
+  <!-- STEP 4: SUCCESS -->
+  <div id="step4" class="card" style="display:none">
+    <div class="success-ico">🎉</div>
+    <div class="success-title">¡Cuenta creada!</div>
+    <div class="success-sub">Bienvenido a EventPay. Tu prueba de 14 días ya empezó.<br>Estos son tus próximos pasos:</div>
+    <div class="next-steps">
+      <div class="next-step">
+        <div class="ns-num">1</div>
+        <div class="ns-text"><strong>Confirmá tu email</strong>Te mandamos un email para verificar tu cuenta. Revisá también spam.</div>
+      </div>
+      <div class="next-step">
+        <div class="ns-num">2</div>
+        <div class="ns-text"><strong>Creá tu primer evento</strong>En el panel admin podés crear tu evento, agregar stands y cargar el catálogo de productos.</div>
+      </div>
+      <div class="next-step">
+        <div class="ns-num">3</div>
+        <div class="ns-text"><strong>Abrí el cajero en el posnet</strong>La URL del cajero para tu empresa es:<br><strong id="cajero-url" style="color:var(--ac)"></strong></div>
+      </div>
+    </div>
+    <a href="login.html" class="btn-main" style="display:block;text-align:center;text-decoration:none;margin-top:20px">Ir al panel admin →</a>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let selectedPlan = 'starter';
+let selectedPay  = 'mp';
+
+// Slug auto-generate from company name
+document.getElementById('r-empresa').addEventListener('input', function(){
+  const slug = this.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  if(!document.getElementById('r-slug').dataset.manual){
+    document.getElementById('r-slug').value = slug;
+    document.getElementById('slug-preview').textContent = slug || 'mi-empresa';
+  }
+});
+document.getElementById('r-slug').addEventListener('input', function(){
+  this.dataset.manual = '1';
+  const clean = this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+  this.value = clean;
+  document.getElementById('slug-preview').textContent = clean || 'mi-empresa';
+});
+
+function selectPlan(plan, el){
+  selectedPlan = plan;
+  document.querySelectorAll('.plan-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selectPay(pay, el){
+  selectedPay = pay;
+  document.querySelectorAll('.pay-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('detail-mp').classList.toggle('show', pay==='mp');
+  document.getElementById('detail-cbu').classList.toggle('show', pay==='cbu');
+}
+
+function goStep(n){
+  [1,2,3,4].forEach(i=>{
+    document.getElementById('step'+i).style.display = i===n?'block':'none';
+    document.getElementById('sc'+i).classList.toggle('active', i===n);
+    document.getElementById('sc'+i).classList.toggle('done', i<n);
+    document.getElementById('sl'+i).classList.toggle('active', i===n);
+    if(i<4) document.getElementById('line'+i).classList.toggle('done', i<n);
+  });
+}
+
+function showErr(id, msg){ const e=document.getElementById(id); e.textContent=msg; e.classList.add('show'); }
+function clearErr(id){ document.getElementById(id).classList.remove('show'); }
+
+function step1Next(){
+  clearErr('err1');
+  const empresa = document.getElementById('r-empresa').value.trim();
+  const email   = document.getElementById('r-email').value.trim();
+  const pass    = document.getElementById('r-pass').value;
+  const pass2   = document.getElementById('r-pass2').value;
+  const slug    = document.getElementById('r-slug').value.trim();
+  if(!empresa) return showErr('err1','Ingresá el nombre de tu empresa.');
+  if(!email || !email.includes('@')) return showErr('err1','Ingresá un email válido.');
+  if(pass.length < 8) return showErr('err1','La contraseña debe tener al menos 8 caracteres.');
+  if(pass !== pass2) return showErr('err1','Las contraseñas no coinciden.');
+  if(!slug || slug.length < 3) return showErr('err1','El slug debe tener al menos 3 caracteres.');
+  goStep(2);
+}
+
+function step2Next(){
+  clearErr('err2');
+  if(selectedPlan === 'enterprise'){
+    document.getElementById('pay-method-sel').style.display = 'none';
+    document.getElementById('detail-mp').classList.remove('show');
+    document.getElementById('detail-cbu').classList.remove('show');
+    document.getElementById('enterprise-msg').style.display = 'block';
+    document.getElementById('s3-title').textContent = 'Plan Enterprise';
+    document.getElementById('s3-sub').textContent = 'Nos contactamos con vos para personalizar la integración.';
+    document.getElementById('btn-step3').textContent = 'Crear mi cuenta →';
+  } else {
+    document.getElementById('pay-method-sel').style.display = 'flex';
+    document.getElementById('enterprise-msg').style.display = 'none';
+    document.getElementById('s3-title').textContent = 'Información de pago';
+    document.getElementById('s3-sub').textContent = 'Elegí cómo preferís pagar cuando termine el período de prueba.';
+    document.getElementById('btn-step3').textContent = 'Crear mi cuenta →';
+    selectPay(selectedPay, document.getElementById('pay-'+selectedPay));
+  }
+  goStep(3);
+}
+
+async function step3Next(){
+  clearErr('err3');
+  const btn = document.getElementById('btn-step3');
+  btn.disabled = true; btn.textContent = 'Creando cuenta…';
+
+  const empresa = document.getElementById('r-empresa').value.trim();
+  const email   = document.getElementById('r-email').value.trim();
+  const pass    = document.getElementById('r-pass').value;
+  const slug    = document.getElementById('r-slug').value.trim();
+
+  try {
+    // 1. Crear usuario en Supabase Auth
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { empresa } }
+    });
+    if(authErr) throw new Error(authErr.message);
+
+    // 2. Crear organización
+    const { data: org, error: orgErr } = await sb.from('organizations').insert({
+      nombre: empresa, email, slug,
+      plan: selectedPlan,
+      estado: 'trial',
+      trial_hasta: new Date(Date.now() + 14*24*60*60*1000).toISOString().split('T')[0],
+    }).select().single();
+    if(orgErr) throw new Error(orgErr.message);
+
+    // 3. Actualizar metadata del usuario con org_id
+    await sb.auth.updateUser({ data: { org_id: org.id } });
+
+    // 4. Mostrar éxito
+    const appUrl = window.location.origin + window.location.pathname.replace('registro.html','');
+    document.getElementById('cajero-url').textContent = `${appUrl}cajero.html?org=${slug}`;
+    goStep(4);
+
+  } catch(e){
+    btn.disabled = false; btn.textContent = 'Crear mi cuenta →';
+    showErr('err3', e.message.includes('already registered')
+      ? 'Ese email ya está registrado. ¿Querés iniciar sesión?'
+      : e.message.includes('already exists')
+      ? 'Ese slug ya está en uso. Elegí otro.'
+      : 'Error: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>

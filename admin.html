@@ -434,18 +434,25 @@ canvas{width:100%!important}
 <div class="toast" id="toast"></div>
 
 <script>
-// Auth guard — redirigir a login si no está autenticado
-if (sessionStorage.getItem('ep_admin') !== 'ok') location.href = 'login.html';
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function logout() {
-  sessionStorage.removeItem('ep_admin');
+// Auth guard con Supabase Auth
+let _session = null;
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ location.href = 'login.html'; return; }
+  _session = session;
+  A.orgId = session.user.user_metadata?.org_id || null;
+  init();
+})();
+
+async function logout() {
+  await sb.auth.signOut();
   location.href = 'login.html';
 }
 
 const A = {
-  eventoId: null, evento: null,
+  orgId: null, eventoId: null, evento: null,
   productos: [], ordenes: [], cajeros: [], stands: [],
 };
 
@@ -472,6 +479,7 @@ async function init(){
   await loadConfigData();
   mostrarSelectorEvento();
 }
+// init() es llamado por el auth guard de arriba
 
 function mostrarSelectorEvento(){
   const picker = document.getElementById('ev-picker');
@@ -518,20 +526,24 @@ async function elegirEvento(id){
 }
 
 async function loadProductos(){
-  const {data} = await sb.from('productos').select('*').eq('evento_id',A.eventoId).order('orden');
-  A.productos = data||[];
+  let q = sb.from('productos').select('*').eq('evento_id',A.eventoId).order('orden');
+  if(A.orgId) q = q.eq('org_id',A.orgId);
+  const {data} = await q; A.productos = data||[];
 }
 async function loadOrdenes(){
-  const {data} = await sb.from('ordenes').select('*').eq('evento_id',A.eventoId).order('created_at',{ascending:false}).limit(200);
-  A.ordenes = data||[];
+  let q = sb.from('ordenes').select('*').eq('evento_id',A.eventoId).order('created_at',{ascending:false}).limit(200);
+  if(A.orgId) q = q.eq('org_id',A.orgId);
+  const {data} = await q; A.ordenes = data||[];
 }
 async function loadCajeros(){
-  const {data} = await sb.from('cajeros').select('*').eq('evento_id',A.eventoId).order('hora_entrada',{ascending:false});
-  A.cajeros = data||[];
+  let q = sb.from('cajeros').select('*').eq('evento_id',A.eventoId).order('hora_entrada',{ascending:false});
+  if(A.orgId) q = q.eq('org_id',A.orgId);
+  const {data} = await q; A.cajeros = data||[];
 }
 async function loadStands(){
-  const {data} = await sb.from('stands').select('*').eq('evento_id',A.eventoId);
-  A.stands = data||[];
+  let q = sb.from('stands').select('*').eq('evento_id',A.eventoId);
+  if(A.orgId) q = q.eq('org_id',A.orgId);
+  const {data} = await q; A.stands = data||[];
 }
 
 /* ── Realtime subscriptions ── */
@@ -756,6 +768,7 @@ async function saveProd(){
     promo_desc:document.getElementById('fp-promodesc').value||null,
     disponible:document.getElementById('fp-disp').value==='true',
     evento_id:A.eventoId,
+    ...(A.orgId && {org_id:A.orgId}),
   };
   if(id){ await sb.from('productos').update(data).eq('id',id); toast('✓ Producto actualizado'); }
   else   { await sb.from('productos').insert({...data,orden:A.productos.length+1}); toast('✓ Producto creado'); }
@@ -825,10 +838,10 @@ let A_eventos_all = []; // todos los eventos (para config)
 let A_stands_all  = []; // todos los stands (para config)
 
 async function loadConfigData() {
-  const [{ data: evs }, { data: sts }] = await Promise.all([
-    sb.from('eventos').select('*').order('created_at', { ascending: false }),
-    sb.from('stands').select('*').order('nombre'),
-  ]);
+  let qEvs = sb.from('eventos').select('*').order('created_at', { ascending: false });
+  let qSts = sb.from('stands').select('*').order('nombre');
+  if(A.orgId){ qEvs = qEvs.eq('org_id',A.orgId); qSts = qSts.eq('org_id',A.orgId); }
+  const [{ data: evs }, { data: sts }] = await Promise.all([qEvs, qSts]);
   A_eventos_all = evs || [];
   A_stands_all  = sts || [];
 }
@@ -917,6 +930,7 @@ async function saveEvento() {
     fecha:  document.getElementById('fev-fecha').value || null,
     lugar:  document.getElementById('fev-lugar').value.trim() || null,
     activo: document.getElementById('fev-activo').value === 'true',
+    ...(A.orgId && {org_id:A.orgId}),
   };
   if (id) { await sb.from('eventos').update(data).eq('id', id); toast('✓ Evento actualizado'); }
   else     { await sb.from('eventos').insert(data); toast('✓ Evento creado'); }
@@ -970,6 +984,7 @@ async function saveStand() {
     nombre,
     evento_id: eventoId,
     activo: document.getElementById('fst-activo').value === 'true',
+    ...(A.orgId && {org_id:A.orgId}),
   };
   if (id) { await sb.from('stands').update(data).eq('id', id); toast('✓ Stand actualizado'); }
   else     { await sb.from('stands').insert(data); toast('✓ Stand creado'); }

@@ -417,15 +417,18 @@ const fmtR   = n => Math.round(n).toLocaleString('es-AR');
 const horaf  = iso => new Date(iso).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
 const pad    = (n,l=4) => String(n).padStart(l,'0');
 
+// Leer org slug de la URL: cajero.html?org=mi-empresa
+const _orgSlug = new URLSearchParams(window.location.search).get('org') || null;
+
 /* ── Estado global ── */
 const S = {
+  orgId: null, orgSlug: _orgSlug,
   cajero:'', stand:'', standId:null, eventoId:null, evento:'',
   cajeroDbId:null, loginTime:null,
   cart:{}, pagoMetodo:null, orderCount:1,
   txTotal:0, txCount:0, txDigital:0, txEfectivo:0, txDev:0,
   ventasProd:{}, productos:[], stands:[], eventos:[],
   ordenesTurno:[],
-  // Carrito pendiente para el callback de MP
   pendingCart:null, pendingTotal:0, pendingEf:0,
 };
 
@@ -605,7 +608,14 @@ async function init() {
 
   // Login normal
   try {
-    const {data:evs} = await sb.from('eventos').select('*').eq('activo', true);
+    // Si viene con ?org=slug, cargar solo ese org
+    if(S.orgSlug){
+      const {data:org} = await sb.from('organizations').select('id').eq('slug',S.orgSlug).single();
+      if(org) S.orgId = org.id;
+    }
+    let q = sb.from('eventos').select('*').eq('activo', true);
+    if(S.orgId) q = q.eq('org_id', S.orgId);
+    const {data:evs} = await q;
     S.eventos = evs || [];
     const sel = document.getElementById('inp-evento');
     sel.innerHTML = S.eventos.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
@@ -618,7 +628,9 @@ async function init() {
 }
 
 async function loadStands(evId) {
-  const {data} = await sb.from('stands').select('*').eq('evento_id', evId).eq('activo', true);
+  let q = sb.from('stands').select('*').eq('evento_id', evId).eq('activo', true);
+  if(S.orgId) q = q.eq('org_id', S.orgId);
+  const {data} = await q;
   S.stands = data || [];
   const sel = document.getElementById('inp-stand');
   sel.innerHTML = '<option value="">— Seleccioná —</option>' +
@@ -649,7 +661,8 @@ async function doLogin() {
 
   try {
     const {data} = await sb.from('cajeros').insert({
-      evento_id:evId, stand_id:standId, nombre, stand_nombre:stand?.nombre
+      evento_id:evId, stand_id:standId, nombre, stand_nombre:stand?.nombre,
+      ...(S.orgId && {org_id:S.orgId}),
     }).select().single();
     S.cajeroDbId = data?.id;
   } catch(e) { console.warn(e); }
@@ -665,7 +678,9 @@ async function doLogin() {
 /* ══ Catálogo ══ */
 async function loadProductos() {
   setSyn(true);
-  const {data} = await sb.from('productos').select('*').eq('evento_id', S.eventoId).order('orden');
+  let qp = sb.from('productos').select('*').eq('evento_id', S.eventoId).order('orden');
+  if(S.orgId) qp = qp.eq('org_id', S.orgId);
+  const {data} = await qp;
   S.productos = data || [];
   setSyn(false);
   renderCat('Todos');
@@ -881,6 +896,7 @@ async function buildTicket(paymentId) {
       mp_payment_id: paymentId,
       mp_status: paymentId?'approved':(S.pagoMetodo==='efectivo'?'cash':'pending'),
       estado:'pagada',
+      ...(S.orgId && {org_id:S.orgId}),
     }).select().single();
     ordenId=ord?.id;
     S._pendingOrdenId=ordenId;
@@ -890,6 +906,7 @@ async function buildTicket(paymentId) {
         producto_nombre:it.nombre, producto_emoji:it.emoji,
         categoria:S.productos.find(p=>p.id===it.id)?.categoria||'',
         cantidad:it.qty, precio_unit:it.precio, subtotal:it.precio*it.qty,
+        ...(S.orgId && {org_id:S.orgId}),
       })));
       S.ordenesTurno.unshift({id:ordenId,numero_orden:num,items,total,
         metodo_pago:S.pagoMetodo,monto_efectivo:ef,mp_payment_id:paymentId,

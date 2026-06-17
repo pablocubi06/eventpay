@@ -13,5 +13,5 @@ const MP_APP_ID   = 'TU_MP_APP_ID';  // ej: '1234567890'
 // 3. (Opcional) Backend propio para integración server-side con MP
 const BACKEND_URL  = '';
 
-// 4. Contraseña del panel Admin (cambiar por la tuya)
-const ADMIN_PASSWORD = 'admin123';
+// 4. Email del super administrador (vos)
+const SUPER_ADMIN_EMAIL = 'pablocubi06@gmail.com';
