@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0f13">
+<title>EventPay — Cajero</title>
+
+<!-- PWA Manifest inline -->
+<link rel="manifest" href="manifest.json">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f13;--bg2:#1a1a22;--bg3:#22222e;
+  --b:rgba(255,255,255,.08);--b2:rgba(255,255,255,.16);
+  --tx:#f0eff5;--mu:#8b8a99;--fa:#555;
+  --ac:#7c6cf8;--ac2:#9d91fa;
+  --gn:#22c55e;--gn2:#16a34a;
+  --am:#f59e0b;--rd:#ef4444;--rd2:#b91c1c;
+  --ra:12px;--rs:8px;
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;font-size:15px;overflow:hidden;touch-action:manipulation}
+
+/* ── Screens ── */
+.sc{position:absolute;inset:0;display:flex;flex-direction:column;transition:opacity .2s,transform .2s}
+.sc.hidden{opacity:0;pointer-events:none;transform:scale(.97)}
+
+/* ══ LOGIN ══ */
+#s-login{align-items:center;justify-content:center;background:var(--bg);padding:24px;gap:0}
+.ll{font-size:30px;font-weight:700;letter-spacing:-1px;text-align:center;margin-bottom:4px}
+.ll span{color:var(--ac2)}
+.ls{font-size:13px;color:var(--mu);margin-bottom:36px;text-align:center}
+.lcard{width:100%;max-width:340px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);padding:24px}
+.fl{font-size:12px;color:var(--mu);margin-bottom:5px;display:block}
+.fi{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--tx);font-size:15px;outline:none;transition:border .15s;-webkit-appearance:none}
+.fi:focus{border-color:var(--ac)}
+select.fi option{background:var(--bg3)}
+.fg{margin-bottom:13px}
+.btn-login{width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:all .15s}
+.btn-login:active{background:#6557e8;transform:scale(.98)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+.crow{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;color:var(--mu);margin-top:14px}
+.cd{width:7px;height:7px;border-radius:50%;background:var(--am);animation:bl 1.2s infinite}
+.cd.ok{background:var(--gn);animation:none}
+.cd.err{background:var(--rd);animation:none}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ══ POS ══ */
+#s-pos{background:var(--bg)}
+.tb{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--b);background:var(--bg2);flex-shrink:0;min-height:52px}
+.tlo{font-size:15px;font-weight:700;letter-spacing:-.5px}
+.tlo span{color:var(--ac2)}
+.tcaj{font-size:12px;background:var(--bg3);border:1px solid var(--b);border-radius:20px;padding:4px 10px;color:var(--mu)}
+.tcaj strong{color:var(--tx)}
+.sb{font-size:10px;display:flex;align-items:center;gap:4px;color:var(--mu)}
+.sd{width:6px;height:6px;border-radius:50%;background:var(--gn)}
+.sd.sy{background:var(--am);animation:bl 1s infinite}
+.bic{width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--b);color:var(--mu);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.bic:active{background:var(--b2)}
+
+/* CATALOG */
+.pos-body{display:grid;grid-template-columns:1fr 264px;flex:1;overflow:hidden}
+.cat-panel{display:flex;flex-direction:column;overflow:hidden}
+.cts{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;flex-shrink:0;scrollbar-width:none;border-bottom:1px solid var(--b)}
+.cts::-webkit-scrollbar{display:none}
+.ct{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--b);background:transparent;color:var(--mu);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.ct.act{background:var(--ac);color:#fff;border-color:var(--ac)}
+.ct:active{transform:scale(.95)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;padding:10px 12px;overflow-y:auto;flex:1;align-content:start}
+.pc{background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);padding:10px 8px;cursor:pointer;text-align:center;transition:all .12s;position:relative;user-select:none;-webkit-user-select:none}
+.pc:active{transform:scale(.92);background:var(--bg3)}
+.pc.promo{border-color:var(--am)}
+.pc.unav{opacity:.35;pointer-events:none}
+.ptag{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--am);color:#451a03;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap;z-index:1}
+.pbadge{position:absolute;top:5px;right:5px;background:var(--ac);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.pem{font-size:26px;margin-bottom:5px;line-height:1}
+.pimg{width:64px;height:64px;object-fit:cover;border-radius:8px;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto}
+.pnm{font-size:10px;color:var(--mu);line-height:1.3;margin-bottom:3px}
+.ppr{font-size:13px;font-weight:600}
+.ppd{font-size:9px;color:var(--am);margin-top:2px}
+
+/* CART */
+.cart-panel{border-left:1px solid var(--b);display:flex;flex-direction:column;background:var(--bg2);overflow:hidden}
+.crh{padding:10px 12px;border-bottom:1px solid var(--b);font-size:12px;font-weight:600;color:var(--mu);display:flex;align-items:center;justify-content:space-between}
+.crc{font-size:11px;color:var(--rd);cursor:pointer}
+.crl{flex:1;overflow-y:auto;padding:6px 8px}
+.cremp{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--mu);font-size:13px}
+.creic{font-size:32px;opacity:.3}
+.ci{display:flex;align-items:center;gap:6px;padding:7px 6px;border-radius:var(--rs)}
+.cie{font-size:18px;flex-shrink:0}
+.cii{flex:1;min-width:0}
+.cin{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cipro{font-size:9px;color:var(--am)}
+.cictr{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.qb{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--b2);color:var(--tx);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.qb:active{background:var(--b)}
+.ciq{font-size:12px;font-weight:600;min-width:16px;text-align:center}
+.cipr{font-size:11px;color:var(--mu);min-width:52px;text-align:right}
+
+/* CART FOOTER */
+.crf{padding:10px 12px;border-top:1px solid var(--b);flex-shrink:0}
+.ctr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.ctl{font-size:12px;color:var(--mu)}
+.cta{font-size:22px;font-weight:700}
+.pgo{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.po{padding:8px 4px;border-radius:var(--rs);border:1px solid var(--b);background:var(--bg3);cursor:pointer;text-align:center;transition:all .12s;font-size:10px;font-weight:500;color:var(--mu)}
+.po .pi{font-size:18px;display:block;margin-bottom:3px}
+.po.sel{border-color:var(--ac);background:rgba(124,108,248,.12);color:var(--ac2)}
+.po:active{transform:scale(.95)}
+.comr{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.comf label{font-size:10px;color:var(--mu);display:block;margin-bottom:3px}
+.comf input{width:100%;padding:7px 8px;background:var(--bg);border:1px solid var(--b);border-radius:var(--rs);color:var(--tx);font-size:13px;outline:none}
+.comf input:focus{border-color:var(--ac)}
+.bcob{width:100%;padding:13px;background:var(--gn);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.bcob:disabled{opacity:.35;cursor:not-allowed}
+.bcob:not(:disabled):active{background:var(--gn2);transform:scale(.98)}
+
+/* ══ PAGO (esperando MP) ══ */
+#s-pago{align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.pacard{width:100%;max-width:340px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);overflow:hidden}
+.patop{background:var(--ac);padding:20px;text-align:center}
+.patl{font-size:12px;opacity:.75;margin-bottom:4px}
+.paamt{font-size:38px;font-weight:700}
+.pabody{padding:20px}
+.past{display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border-radius:var(--rs);margin-bottom:16px}
+.psdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.psdot.w{background:var(--am);animation:bl 1.2s infinite}
+.psdot.ok{background:var(--gn);animation:none}
+.psdot.err{background:var(--rd);animation:none}
+.pstxt{font-size:13px}
+.pamr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mu);margin-bottom:12px}
+.pamic{font-size:20px}
+.paprev{font-size:12px;color:var(--mu);margin-bottom:16px;line-height:1.8;white-space:pre-line}
+.paact{display:flex;gap:8px}
+.bcan{flex:1;padding:11px;background:transparent;border:1px solid var(--b2);color:var(--mu);border-radius:var(--rs);font-size:14px;cursor:pointer;transition:all .15s}
+.bcan:active{background:var(--bg3)}
+/* Botón de abrir MP en posnet */
+.bmp{flex:1;padding:11px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.bmp:active{background:#6557e8}
+/* Botón simular OK (solo dev) */
+.bsim{flex:1;padding:11px;background:var(--gn);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer}
+.bsim:active{background:var(--gn2)}
+.dev-note{margin-top:12px;font-size:11px;color:var(--fa);text-align:center;line-height:1.5}
+
+/* ══ RESULTADO ══ */
+#s-resultado{align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.rescard{width:100%;max-width:340px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);padding:28px 24px;text-align:center}
+.res-icon{font-size:52px;margin-bottom:12px}
+.res-titulo{font-size:20px;font-weight:700;margin-bottom:6px}
+.res-sub{font-size:13px;color:var(--mu);margin-bottom:20px;line-height:1.5}
+.res-detail{background:var(--bg3);border-radius:var(--rs);padding:12px;margin-bottom:20px;text-align:left;font-size:12px;color:var(--mu);line-height:1.8}
+.res-act{display:flex;gap:8px}
+.bres-ok{flex:1;padding:12px;background:var(--gn);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer}
+.bres-retry{flex:1;padding:12px;background:var(--am);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer}
+.bres-cancel{flex:1;padding:12px;background:transparent;border:1px solid var(--b2);color:var(--mu);border-radius:var(--rs);font-size:14px;cursor:pointer}
+
+/* ══ TICKET ══ */
+#s-ticket{align-items:center;justify-content:center;background:rgba(0,0,0,.85);padding:16px}
+.ticket{width:100%;max-width:300px;background:#fff;color:#111;border-radius:var(--ra);overflow:hidden;font-family:'Courier New',monospace}
+.tkh{background:var(--ac);color:#fff;padding:14px 16px;text-align:center}
+.tkev{font-size:10px;opacity:.8;margin-bottom:2px;font-family:system-ui}
+.tktit{font-size:17px;font-weight:700;font-family:system-ui}
+.tkb{padding:14px 16px}
+.tknum{font-size:11px;color:#888;text-align:center;margin-bottom:10px}
+.tkd{border:none;border-top:1px dashed #ccc;margin:10px 0}
+.tkit{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px dotted #eee;font-size:12px}
+.tkit:last-of-type{border:none}
+.tkil{flex:1}
+.tkin{font-weight:700}
+.tkipro{font-size:10px;color:#b45309}
+.tkiq{color:#666;font-size:11px}
+.tkipr{font-weight:700;text-align:right}
+.tktrow{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-top:8px}
+.tkpago{font-size:11px;color:#555;margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:6px 8px}
+.tkmpid{font-size:10px;color:#888;margin-top:4px;word-break:break-all}
+.tkf{background:#f8f8f8;padding:12px 16px;text-align:center}
+.tkqr{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;width:72px;height:72px;margin:0 auto 8px}
+.tkqrc{border-radius:1px}
+.tkpres{font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-family:system-ui}
+.tkwarn{font-size:9px;color:#999;margin-top:3px;font-family:system-ui}
+.tkact{display:flex;gap:8px;padding:12px 16px 16px;background:#fff}
+.bnu{flex:1;padding:10px;background:transparent;border:1.5px solid #e5e7eb;color:#374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.bimp{flex:1;padding:10px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.bimp:active{background:#6557e8}
+
+/* ══ HISTORIAL / DEVOLUCIONES ══ */
+#s-hist{display:flex;flex-direction:column;overflow:hidden}
+.hhdr{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--b);background:var(--bg2);flex-shrink:0}
+.bbk{width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--b);color:var(--tx);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.htit{font-size:16px;font-weight:600}
+.hlist{flex:1;overflow-y:auto;padding:12px 14px}
+.hitem{background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);padding:13px 14px;margin-bottom:10px}
+.hirow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hinum{font-size:13px;font-weight:600}
+.hest{font-size:11px;padding:3px 8px;border-radius:10px;font-weight:500}
+.hest.pag{background:#d1fae5;color:#065f46}
+.hest.dev{background:#fee2e2;color:#991b1b}
+.hiinfo{font-size:12px;color:var(--mu);margin-bottom:8px;line-height:1.6}
+.himpid{font-size:10px;color:var(--fa);margin-bottom:8px;word-break:break-all}
+.hitot{font-size:15px;font-weight:700;margin-bottom:10px}
+.bdev{padding:8px 14px;background:transparent;border:1px solid var(--rd);color:var(--rd);border-radius:var(--rs);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.bdev:active{background:rgba(239,68,68,.1)}
+.bdev:disabled{opacity:.4;cursor:not-allowed}
+
+/* ══ CIERRE ══ */
+#s-cierre{overflow-y:auto;background:var(--bg)}
+.cierr-wrap{padding:16px}
+.cbig{background:linear-gradient(135deg,var(--ac),#9d91fa);border-radius:var(--ra);padding:20px;margin-bottom:12px;text-align:center}
+.cbigl{font-size:12px;opacity:.8;margin-bottom:4px}
+.cbiga{font-size:36px;font-weight:700}
+.ccard{background:var(--bg2);border:1px solid var(--b);border-radius:var(--ra);padding:16px;margin-bottom:12px}
+.ccardtit{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.cmet{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--b)}
+.cmet:last-child{border:none}
+.cml{font-size:13px;color:var(--mu)}
+.cmv{font-size:15px;font-weight:600}
+.bct{width:100%;padding:14px;background:var(--rd);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:all .15s}
+.bct:active{background:var(--rd2);transform:scale(.98)}
+.cvi{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
+.cvi:last-child{border:none}
+
+/* TOAST */
+.toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:#1a1a2e;border:1px solid var(--b2);color:var(--tx);padding:10px 18px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div class="sc" id="s-login">
+  <div class="ll">Event<span>Pay</span></div>
+  <div class="ls">Sistema de cajero · Posnet</div>
+  <div class="lcard">
+    <div class="fg"><label class="fl">Tu nombre</label><input class="fi" id="inp-nombre" type="text" placeholder="Ej: Laura García" autocomplete="off"></div>
+    <div class="fg"><label class="fl">Evento activo</label><select class="fi" id="inp-evento"><option value="">Cargando…</option></select></div>
+    <div class="fg"><label class="fl">Stand / barra</label><select class="fi" id="inp-stand"><option value="">— Seleccioná —</option></select></div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar al turno</button>
+    <div class="crow"><div class="cd" id="cdot"></div><span id="clabel">Conectando…</span></div>
+  </div>
+</div>
+
+<!-- ══ POS ══ -->
+<div class="sc hidden" id="s-pos">
+  <div class="tb">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tlo">Event<span>Pay</span></div>
+      <div class="tcaj"><strong id="lb-caj">—</strong> · <span id="lb-stand">—</span></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="sb"><div class="sd" id="sdot"></div><span id="slbl">en vivo</span></div>
+      <div class="bic" id="btn-hist" title="Historial">🧾</div>
+      <div class="bic" id="btn-cierre" title="Cierre">📊</div>
+      <div class="bic" id="btn-logout" title="Salir">⏻</div>
+    </div>
+  </div>
+  <div class="pos-body">
+    <!-- Catálogo -->
+    <div class="cat-panel">
+      <div class="cts" id="cat-tabs"></div>
+      <div class="pgrid" id="prod-grid"></div>
+    </div>
+    <!-- Carrito -->
+    <div class="cart-panel">
+      <div class="crh"><span>Orden</span><span class="crc" onclick="clearCart()">Limpiar</span></div>
+      <div class="crl" id="ci-list">
+        <div class="cremp"><div class="creic">🛒</div><span>Tocá un producto</span></div>
+      </div>
+      <div class="crf">
+        <div class="ctr"><span class="ctl">Total</span><span class="cta">$<span id="c-total">0</span></span></div>
+        <div class="pgo">
+          <div class="po" onclick="selPago('tarjeta')" id="pm-tarjeta"><span class="pi">💳</span>Tarjeta</div>
+          <div class="po" onclick="selPago('qr')" id="pm-qr"><span class="pi">📲</span>QR / MP</div>
+          <div class="po" onclick="selPago('efectivo')" id="pm-efectivo"><span class="pi">💵</span>Efectivo</div>
+          <div class="po" onclick="selPago('combinado')" id="pm-combinado"><span class="pi">🔀</span>Combinado</div>
+        </div>
+        <div class="comr" id="comr" style="display:none">
+          <div class="comf"><label>💵 Efectivo</label><input type="number" id="com-ef" placeholder="$0" oninput="calcCom()"></div>
+          <div class="comf"><label>💳 Digital</label><input type="number" id="com-dig" placeholder="$0" readonly></div>
+        </div>
+        <button class="bcob" id="bcob" disabled onclick="initCobro()">✓ Cobrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGO (procesando con MP) ══ -->
+<div class="sc hidden" id="s-pago">
+  <div class="pacard">
+    <div class="patop">
+      <div class="patl">Total a cobrar</div>
+      <div class="paamt">$<span id="pa-amt">0</span></div>
+    </div>
+    <div class="pabody">
+      <div class="past" id="pa-status">
+        <div class="psdot w" id="pdot"></div>
+        <div class="pstxt" id="ptxt">Preparando cobro…</div>
+      </div>
+      <div class="pamr"><span class="pamic" id="pmic">💳</span><span id="pmlbl">—</span></div>
+      <div class="paprev" id="pprev"></div>
+      <div class="paact" id="pa-actions">
+        <button class="bcan" onclick="cancelPago()">✕ Cancelar</button>
+        <!-- Para tarjeta/QR: botón que dispara el Deep Link de MP -->
+        <button class="bmp" id="btn-abrir-mp" onclick="abrirMercadoPago()" style="display:none">
+          📲 Abrir Mercado Pago
+        </button>
+        <!-- Para efectivo y modo desarrollo: simulador -->
+        <button class="bsim" id="btn-sim" onclick="simOk()" style="display:none">
+          ✓ Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="dev-note" id="dev-note" style="display:none">
+    ⚙️ Modo desarrollo: usá "Confirmar" para simular el pago.<br>
+    En producción el posnet toma control automáticamente.
+  </div>
+</div>
+
+<!-- ══ RESULTADO (callback de MP) ══ -->
+<div class="sc hidden" id="s-resultado">
+  <div class="rescard">
+    <div class="res-icon" id="res-icon">✅</div>
+    <div class="res-titulo" id="res-titulo">Pago aprobado</div>
+    <div class="res-sub" id="res-sub">El cobro fue procesado correctamente.</div>
+    <div class="res-detail" id="res-detail"></div>
+    <div class="res-act" id="res-act"></div>
+  </div>
+</div>
+
+<!-- ══ TICKET ══ -->
+<div class="sc hidden" id="s-ticket">
+  <div class="ticket">
+    <div class="tkh"><div class="tkev" id="t-ev">—</div><div class="tktit">🎟 Vale de consumición</div></div>
+    <div class="tkb">
+      <div class="tknum" id="t-num">#0001</div>
+      <hr class="tkd">
+      <div id="t-items"></div>
+      <hr class="tkd">
+      <div class="tktrow"><span>TOTAL</span><span id="t-tot">$0</span></div>
+      <div class="tkpago" id="t-pago"></div>
+      <div class="tkmpid" id="t-mpid"></div>
+    </div>
+    <div class="tkf">
+      <div class="tkqr" id="t-qr"></div>
+      <div class="tkpres">Presentá este ticket en la barra</div>
+      <div class="tkwarn">Válido una sola vez · No transferible</div>
+    </div>
+    <div class="tkact">
+      <button class="bnu" onclick="nuevaOrden()">Nueva orden</button>
+      <button class="bimp" onclick="simImprimir()">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HISTORIAL / DEVOLUCIONES ══ -->
+<div class="sc hidden" id="s-hist">
+  <div class="hhdr">
+    <button class="bbk" onclick="show('s-pos')">←</button>
+    <div class="htit">Historial · Devoluciones</div>
+  </div>
+  <div class="hlist" id="h-list">
+    <div style="color:var(--mu);font-size:13px;padding:20px 0;text-align:center">Cargando…</div>
+  </div>
+</div>
+
+<!-- ══ CIERRE ══ -->
+<div class="sc hidden" id="s-cierre">
+  <div class="cierr-wrap">
+    <div class="hhdr" style="margin:-16px -16px 16px;border-radius:0;background:var(--bg2);border-bottom:1px solid var(--b)">
+      <button class="bbk" onclick="show('s-pos')">←</button>
+      <div class="htit">Cierre de turno</div>
+    </div>
+    <div class="cbig">
+      <div class="cbigl">Total recaudado en tu turno</div>
+      <div class="cbiga">$<span id="cc-tot">0</span></div>
+    </div>
+    <div class="ccard">
+      <div class="ccardtit">Resumen</div>
+      <div class="cmet"><span class="cml">Cajero</span><span class="cmv" id="cc-caj">—</span></div>
+      <div class="cmet"><span class="cml">Stand</span><span class="cmv" id="cc-st">—</span></div>
+      <div class="cmet"><span class="cml">Entrada</span><span class="cmv" id="cc-ent">—</span></div>
+      <div class="cmet"><span class="cml">Transacciones</span><span class="cmv" id="cc-tx">0</span></div>
+      <div class="cmet"><span class="cml">Devoluciones</span><span class="cmv" id="cc-dev">0</span></div>
+      <div class="cmet"><span class="cml">Tarjeta / QR</span><span class="cmv" id="cc-dig">$0</span></div>
+      <div class="cmet"><span class="cml">Efectivo</span><span class="cmv" id="cc-ef">$0</span></div>
+    </div>
+    <div class="ccard">
+      <div class="ccardtit">Ventas por producto</div>
+      <div id="cc-prods"></div>
+    </div>
+    <button class="bct" onclick="cerrarTurno()">Cerrar turno y salir</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   CONFIGURACIÓN (viene de js/config.js)
+   SUPABASE_URL, SUPABASE_KEY, BACKEND_URL
+   MP_APP_ID: tu Application ID de MP (developers)
+════════════════════════════════════════════ */
+// Si no está en config.js, ponelo acá:
+// const MP_APP_ID = 'TU_APP_ID_DE_MP';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ── Helpers ── */
+const fmt    = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtR   = n => Math.round(n).toLocaleString('es-AR');
+const horaf  = iso => new Date(iso).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+const pad    = (n,l=4) => String(n).padStart(l,'0');
+
+/* ── Estado global ── */
+const S = {
+  cajero:'', stand:'', standId:null, eventoId:null, evento:'',
+  cajeroDbId:null, loginTime:null,
+  cart:{}, pagoMetodo:null, orderCount:1,
+  txTotal:0, txCount:0, txDigital:0, txEfectivo:0, txDev:0,
+  ventasProd:{}, productos:[], stands:[], eventos:[],
+  ordenesTurno:[],
+  // Carrito pendiente para el callback de MP
+  pendingCart:null, pendingTotal:0, pendingEf:0,
+};
+
+/* ── Screens ── */
+function show(id) {
+  document.querySelectorAll('.sc').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id)?.classList.remove('hidden');
+}
+
+/* ══════════════════════════════════════════
+   DEEP LINK — MERCADO PAGO POINT
+   Documentación oficial MP:
+   https://github.com/mercadopago/point-android_integration
+══════════════════════════════════════════ */
+function buildMPDeepLink(amount, description, ordenId) {
+  // URL base oficial del Deep Link de Mercado Pago Point
+  const base = 'https://secure.mlstatic.com/org-img/point/app/index.html';
+
+  // success_url y failure_url: la app retoma el control después del cobro
+  // Usamos la misma URL del cajero con parámetros de resultado
+  const appUrl = window.location.origin + window.location.pathname;
+  const successUrl = `${appUrl}?mp_result=success&orden_id=${ordenId}&amount=${amount}`;
+  const failureUrl = `${appUrl}?mp_result=failure&orden_id=${ordenId}&amount=${amount}`;
+
+  const params = new URLSearchParams({
+    amount:      amount.toFixed(2),           // monto con 2 decimales
+    description: description.substring(0, 40), // max 40 chars
+    success_url: successUrl,
+    failure_url: failureUrl,
+  });
+
+  // Si tenés APP_ID de MP (para cobros con fee de plataforma):
+  if (typeof MP_APP_ID !== 'undefined' && MP_APP_ID) {
+    params.append('app_id', MP_APP_ID);
+  }
+
+  return `${base}?${params.toString()}`;
+}
+
+function abrirMercadoPago() {
+  const total     = S.pendingTotal;
+  const ordenId   = S._pendingOrdenId || 'temp';
+  const desc      = S.pendingCart
+    ? S.pendingCart.map(it => `${it.nombre} x${it.qty}`).join(', ')
+    : 'Venta EventPay';
+
+  const deepLink = buildMPDeepLink(total, desc, ordenId);
+
+  // Guardar estado del carrito en sessionStorage por si el
+  // browser se recarga al volver del Deep Link
+  sessionStorage.setItem('ep_pending', JSON.stringify({
+    cart:     S.pendingCart,
+    total:    S.pendingTotal,
+    ef:       S.pendingEf,
+    metodo:   S.pagoMetodo,
+    ordenId,
+    num:      S.orderCount,
+    evento:   S.evento,
+    stand:    S.stand,
+  }));
+
+  // Actualizar UI
+  document.getElementById('pdot').className = 'psdot w';
+  document.getElementById('ptxt').textContent = 'Esperando pago en Mercado Pago…';
+
+  // Abrir el Deep Link — en el posnet esto abre la app nativa de MP
+  // En PC/browser normal abrirá el sitio web de MP
+  window.location.href = deepLink;
+}
+
+/* ══════════════════════════════════════════
+   CALLBACK — cuando MP devuelve el control
+   MP llama a success_url o failure_url
+   con los parámetros: mp_result, orden_id, amount
+   y opcionalmente: payment_id, status
+══════════════════════════════════════════ */
+function checkMPCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const result  = params.get('mp_result');
+  if (!result) return false;
+
+  // Limpiar la URL sin recargar
+  window.history.replaceState({}, '', window.location.pathname);
+
+  const ordenId  = params.get('orden_id');
+  const amount   = parseFloat(params.get('amount')) || 0;
+  const paymentId = params.get('payment_id') || null;
+
+  // Recuperar el carrito pendiente de sessionStorage
+  const pending = JSON.parse(sessionStorage.getItem('ep_pending') || 'null');
+  sessionStorage.removeItem('ep_pending');
+
+  if (result === 'success') {
+    mostrarResultado('success', amount, paymentId, pending, ordenId);
+  } else {
+    mostrarResultado('failure', amount, paymentId, pending, ordenId);
+  }
+  return true;
+}
+
+function mostrarResultado(tipo, amount, paymentId, pending, ordenId) {
+  const icon  = document.getElementById('res-icon');
+  const tit   = document.getElementById('res-titulo');
+  const sub   = document.getElementById('res-sub');
+  const det   = document.getElementById('res-detail');
+  const act   = document.getElementById('res-act');
+
+  if (tipo === 'success') {
+    icon.textContent = '✅';
+    tit.textContent  = 'Pago aprobado';
+    sub.textContent  = 'El cobro fue procesado correctamente por Mercado Pago.';
+    tit.style.color  = 'var(--gn)';
+    det.innerHTML = `
+      Monto: <strong>${fmt(amount)}</strong><br>
+      ${paymentId ? `Payment ID: <strong>${paymentId}</strong><br>` : ''}
+      ${pending ? `Stand: ${pending.stand}<br>Método: ${pending.metodo}` : ''}
+    `;
+    act.innerHTML = `<button class="bres-ok" onclick="irATicketDesdeCallback()">Ver ticket</button>`;
+
+    // Si tenemos el carrito pendiente, guardamos en DB y mostramos ticket
+    if (pending) {
+      S.pendingCart  = pending.cart;
+      S.pendingTotal = pending.total;
+      S.pendingEf    = pending.ef;
+      S.pagoMetodo   = pending.metodo;
+      S.orderCount   = pending.num;
+      S._mpPaymentId = paymentId;
+    }
+  } else {
+    icon.textContent = '❌';
+    tit.textContent  = 'Pago no procesado';
+    sub.textContent  = 'El cobro fue rechazado o cancelado en Mercado Pago.';
+    tit.style.color  = 'var(--rd)';
+    det.innerHTML = `
+      Monto: ${fmt(amount)}<br>
+      Podés intentar nuevamente o usar otro medio de pago.
+    `;
+    act.innerHTML = `
+      <button class="bres-retry" onclick="volverAPOS()">Reintentar</button>
+      <button class="bres-cancel" onclick="nuevaOrden()">Cancelar</button>
+    `;
+  }
+  show('s-resultado');
+}
+
+function irATicketDesdeCallback() {
+  if (S.pendingCart && S.pendingCart.length > 0) {
+    buildTicket(S._mpPaymentId);
+  } else {
+    nuevaOrden();
+  }
+}
+
+function volverAPOS() {
+  // Restaurar carrito si estaba pendiente
+  if (S.pendingCart) {
+    S.cart = {};
+    S.pendingCart.forEach(it => { S.cart[it.id] = it.qty; });
+  }
+  show('s-pos');
+  renderCat('Todos');
+  renderCart();
+}
+
+/* ══ Init / conexión ══ */
+async function init() {
+  // Primero: chequear si venimos de un callback de MP
+  const wasCallback = checkMPCallback();
+  if (wasCallback) {
+    // Intentar restaurar datos de sesión para el callback
+    try {
+      const{data:evs}=await sb.from('eventos').select('*').eq('activo',true).limit(1);
+      if (evs?.length) { S.eventoId=evs[0].id; S.evento=evs[0].nombre; }
+    } catch(e) {}
+    return;
+  }
+
+  // Login normal
+  try {
+    const {data:evs} = await sb.from('eventos').select('*').eq('activo', true);
+    S.eventos = evs || [];
+    const sel = document.getElementById('inp-evento');
+    sel.innerHTML = S.eventos.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    if (S.eventos.length) await loadStands(S.eventos[0].id);
+    sel.onchange = () => loadStands(sel.value);
+    setConn(true);
+  } catch(e) {
+    setConn(false, 'Sin conexión al servidor');
+  }
+}
+
+async function loadStands(evId) {
+  const {data} = await sb.from('stands').select('*').eq('evento_id', evId).eq('activo', true);
+  S.stands = data || [];
+  const sel = document.getElementById('inp-stand');
+  sel.innerHTML = '<option value="">— Seleccioná —</option>' +
+    S.stands.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+}
+
+function setConn(ok, msg='') {
+  const d=document.getElementById('cdot'), l=document.getElementById('clabel');
+  d.className='cd'+(ok?' ok':' err');
+  l.textContent = ok ? 'Conectado' : msg;
+}
+
+/* ══ Login ══ */
+async function doLogin() {
+  const nombre  = document.getElementById('inp-nombre').value.trim();
+  const standId = document.getElementById('inp-stand').value;
+  const evId    = document.getElementById('inp-evento').value;
+  if (!nombre)  { toast('Ingresá tu nombre'); return; }
+  if (!standId) { toast('Seleccioná tu stand'); return; }
+
+  document.getElementById('btn-login').disabled = true;
+  document.getElementById('btn-login').textContent = 'Entrando…';
+
+  const stand = S.stands.find(s => s.id===standId);
+  const evento= S.eventos.find(e => e.id===evId);
+  S.cajero=nombre; S.stand=stand?.nombre||''; S.standId=standId;
+  S.eventoId=evId; S.evento=evento?.nombre||''; S.loginTime=new Date();
+
+  try {
+    const {data} = await sb.from('cajeros').insert({
+      evento_id:evId, stand_id:standId, nombre, stand_nombre:stand?.nombre
+    }).select().single();
+    S.cajeroDbId = data?.id;
+  } catch(e) { console.warn(e); }
+
+  document.getElementById('lb-caj').textContent  = nombre.split(' ')[0];
+  document.getElementById('lb-stand').textContent = S.stand;
+
+  await loadProductos();
+  subscribeProductos();
+  show('s-pos');
+}
+
+/* ══ Catálogo ══ */
+async function loadProductos() {
+  setSyn(true);
+  const {data} = await sb.from('productos').select('*').eq('evento_id', S.eventoId).order('orden');
+  S.productos = data || [];
+  setSyn(false);
+  renderCat('Todos');
+}
+
+function subscribeProductos() {
+  sb.channel('prod-pos-live')
+    .on('postgres_changes', {event:'*', schema:'public', table:'productos', filter:`evento_id=eq.${S.eventoId}`},
+      payload => {
+        setSyn(true);
+        if (payload.eventType==='INSERT') S.productos.push(payload.new);
+        else if (payload.eventType==='UPDATE') {
+          const i=S.productos.findIndex(p=>p.id===payload.new.id);
+          if(i>=0) S.productos[i]=payload.new;
+        } else if (payload.eventType==='DELETE') {
+          S.productos=S.productos.filter(p=>p.id!==payload.old.id);
+        }
+        setTimeout(()=>setSyn(false), 600);
+        renderCat(document.querySelector('.ct.act')?.textContent||'Todos');
+        toast('📋 Catálogo actualizado');
+      })
+    .subscribe();
+}
+
+function setSyn(on) {
+  const d=document.getElementById('sdot'), l=document.getElementById('slbl');
+  if(!d) return;
+  d.className='sd'+(on?' sy':'');
+  l.textContent=on?'sincronizando':'en vivo';
+}
+
+function renderCat(ac) {
+  const cats=['Todos',...new Set(S.productos.map(p=>p.categoria))];
+  document.getElementById('cat-tabs').innerHTML=cats.map(c=>
+    `<button class="ct${c===ac?' act':''}" onclick="renderCat('${c}')">${c}</button>`
+  ).join('');
+  const list=ac==='Todos'?S.productos:S.productos.filter(p=>p.categoria===ac);
+  document.getElementById('prod-grid').innerHTML=list.map(p=>{
+    const qty=S.cart[p.id]||0;
+    return`<div class="pc${p.es_promo?' promo':''}${!p.disponible?' unav':''}" onclick="addItem('${p.id}')">
+      ${p.es_promo?`<div class="ptag">PROMO</div>`:''}
+      ${qty>0?`<div class="pbadge">${qty}</div>`:''}
+      ${p.imagen_url
+        ? `<img class="pimg" src="${p.imagen_url}" alt="${p.nombre}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`+`<div class="pem" style="display:none">${p.emoji}</div>`
+        : `<div class="pem">${p.emoji}</div>`}
+      <div class="pnm">${p.nombre}</div>
+      <div class="ppr">${fmt(p.precio)}</div>
+      ${p.promo_desc?`<div class="ppd">${p.promo_desc}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ══ Cart ══ */
+function addItem(id)    { S.cart[id]=(S.cart[id]||0)+1; refresh(); }
+function removeItem(id) { if(S.cart[id]>1) S.cart[id]--; else delete S.cart[id]; refresh(); }
+function clearCart()    {
+  S.cart={}; S.pagoMetodo=null;
+  document.querySelectorAll('.po').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('comr').style.display='none';
+  refresh();
+}
+
+function refresh() {
+  renderCat(document.querySelector('.ct.act')?.textContent||'Todos');
+  renderCart();
+  updBtn();
+}
+
+function renderCart() {
+  const el=document.getElementById('ci-list');
+  const entries=Object.entries(S.cart);
+  if (!entries.length) {
+    el.innerHTML=`<div class="cremp"><div class="creic">🛒</div><span>Tocá un producto</span></div>`;
+    document.getElementById('c-total').textContent='0';
+    return;
+  }
+  el.innerHTML=entries.map(([id,qty])=>{
+    const p=S.productos.find(x=>x.id==id); if(!p) return'';
+    return`<div class="ci">
+      <span class="cie">${p.emoji}</span>
+      <div class="cii">
+        <div class="cin">${p.nombre}</div>
+        ${p.promo_desc?`<div class="cipro">${p.promo_desc}</div>`:''}
+      </div>
+      <div class="cictr">
+        <button class="qb" onclick="removeItem('${id}')">−</button>
+        <span class="ciq">${qty}</span>
+        <button class="qb" onclick="addItem('${id}')">+</button>
+      </div>
+      <div class="cipr">${fmt(p.precio*qty)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('c-total').textContent=fmtR(getTotal());
+}
+
+function getTotal() {
+  return Object.entries(S.cart).reduce((s,[id,qty])=>{
+    const p=S.productos.find(x=>x.id==id);
+    return s+(p?p.precio*qty:0);
+  }, 0);
+}
+
+/* ══ Pago ══ */
+function selPago(m) {
+  S.pagoMetodo=m;
+  document.querySelectorAll('.po').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('pm-'+m).classList.add('sel');
+  document.getElementById('comr').style.display=m==='combinado'?'grid':'none';
+  if(m!=='combinado'){document.getElementById('com-ef').value='';document.getElementById('com-dig').value='';}
+  updBtn();
+}
+function calcCom(){
+  const ef=parseFloat(document.getElementById('com-ef').value)||0;
+  document.getElementById('com-dig').value=Math.max(0,getTotal()-ef);
+}
+function updBtn(){
+  document.getElementById('bcob').disabled=!(Object.keys(S.cart).length>0&&S.pagoMetodo);
+}
+
+function initCobro() {
+  const total=getTotal();
+  if(!total||!S.pagoMetodo) return;
+
+  const ef = S.pagoMetodo==='combinado'
+    ? (parseFloat(document.getElementById('com-ef').value)||0)
+    : S.pagoMetodo==='efectivo' ? total : 0;
+
+  // Guardar estado para el callback
+  S.pendingTotal = total;
+  S.pendingEf    = ef;
+  S.pendingCart  = Object.entries(S.cart).map(([id,qty])=>{
+    const p=S.productos.find(x=>x.id==id);
+    return p?{id:p.id,nombre:p.nombre,emoji:p.emoji,precio:p.precio,qty,promo_desc:p.promo_desc||null}:null;
+  }).filter(Boolean);
+
+  // UI de la pantalla de pago
+  const icons ={tarjeta:'💳',qr:'📲',efectivo:'💵',combinado:'🔀'};
+  const labels={tarjeta:'Tarjeta · Mercado Pago',qr:'QR · Mercado Pago',efectivo:'Efectivo',combinado:'Combinado'};
+  document.getElementById('pa-amt').textContent=fmtR(total);
+  document.getElementById('pmic').textContent=icons[S.pagoMetodo];
+  document.getElementById('pmlbl').textContent=labels[S.pagoMetodo];
+  document.getElementById('pprev').textContent=S.pendingCart.map(it=>`${it.emoji} ${it.nombre} x${it.qty}`).join('\n');
+  document.getElementById('pdot').className='psdot w';
+
+  const btnMP  = document.getElementById('btn-abrir-mp');
+  const btnSim = document.getElementById('btn-sim');
+  const devNote= document.getElementById('dev-note');
+
+  if (S.pagoMetodo==='efectivo') {
+    // Efectivo: no pasa por posnet, confirmar directo
+    document.getElementById('ptxt').textContent='Registrando pago en efectivo…';
+    btnMP.style.display='none';
+    btnSim.style.display='flex';
+    devNote.style.display='none';
+    show('s-pago');
+    // Auto-confirmar en 1.5s para efectivo
+    setTimeout(()=>{ S._mpPaymentId=null; buildTicket(null); }, 1500);
+  } else {
+    // Tarjeta / QR / Combinado → Deep Link a MP
+    document.getElementById('ptxt').textContent='Listo para cobrar con Mercado Pago';
+    btnMP.style.display='flex';
+    btnSim.style.display='flex'; // también mostramos el simulador para desarrollo
+    devNote.style.display='block';
+    show('s-pago');
+  }
+}
+
+function cancelPago() {
+  sessionStorage.removeItem('ep_pending');
+  show('s-pos');
+}
+
+/* Simular OK (solo desarrollo, sin posnet real) */
+function simOk() {
+  S._mpPaymentId='SIM-'+ Date.now();
+  buildTicket(S._mpPaymentId);
+}
+
+/* ══ Ticket + guardar en DB ══ */
+async function buildTicket(paymentId) {
+  const total  = S.pendingTotal || getTotal();
+  const ef     = S.pendingEf   || 0;
+  const items  = S.pendingCart || Object.entries(S.cart).map(([id,qty])=>{
+    const p=S.productos.find(x=>x.id==id);
+    return p?{id:p.id,nombre:p.nombre,emoji:p.emoji,precio:p.precio,qty,promo_desc:p.promo_desc||null}:null;
+  }).filter(Boolean);
+
+  const now  = new Date();
+  const hora = now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const num  = pad(S.orderCount); S.orderCount++;
+
+  // Stats de turno
+  S.txCount++;
+  S.txTotal+=total;
+  S.txEfectivo+=ef;
+  S.txDigital+=S.pagoMetodo==='efectivo'?0:Math.max(0,total-ef);
+  items.forEach(it=>{
+    S.ventasProd[it.id]=S.ventasProd[it.id]||{name:it.nombre,emoji:it.emoji,qty:0,total:0};
+    S.ventasProd[it.id].qty+=it.qty;
+    S.ventasProd[it.id].total+=it.precio*it.qty;
+  });
+
+  // Guardar en Supabase
+  let ordenId=null;
+  try {
+    const{data:ord}=await sb.from('ordenes').insert({
+      evento_id:S.eventoId, cajero_id:S.cajeroDbId,
+      stand_nombre:S.stand, cajero_nombre:S.cajero,
+      numero_orden:num, items, total,
+      metodo_pago:S.pagoMetodo,
+      monto_efectivo:ef,
+      monto_digital:Math.max(0,total-ef),
+      mp_payment_id: paymentId,
+      mp_status: paymentId?'approved':(S.pagoMetodo==='efectivo'?'cash':'pending'),
+      estado:'pagada',
+    }).select().single();
+    ordenId=ord?.id;
+    S._pendingOrdenId=ordenId;
+    if(ordenId){
+      await sb.from('transacciones').insert(items.map(it=>({
+        orden_id:ordenId, evento_id:S.eventoId, producto_id:it.id,
+        producto_nombre:it.nombre, producto_emoji:it.emoji,
+        categoria:S.productos.find(p=>p.id===it.id)?.categoria||'',
+        cantidad:it.qty, precio_unit:it.precio, subtotal:it.precio*it.qty,
+      })));
+      S.ordenesTurno.unshift({id:ordenId,numero_orden:num,items,total,
+        metodo_pago:S.pagoMetodo,monto_efectivo:ef,mp_payment_id:paymentId,
+        monto_digital:Math.max(0,total-ef),estado:'pagada',created_at:now.toISOString()});
+    }
+  } catch(e){console.warn('Error guardando orden',e);}
+
+  // Render ticket
+  document.getElementById('t-ev').textContent=S.evento;
+  document.getElementById('t-num').textContent=`#${num} · ${hora} · ${S.stand}`;
+  document.getElementById('t-tot').textContent=fmt(total);
+  document.getElementById('t-pago').textContent={
+    tarjeta:'💳 Pagado con tarjeta · Mercado Pago',
+    qr:'📲 Pagado con QR · Mercado Pago',
+    efectivo:'💵 Pagado en efectivo',
+    combinado:`🔀 $${fmtR(ef)} efectivo + $${fmtR(Math.max(0,total-ef))} digital`,
+  }[S.pagoMetodo]||'';
+  document.getElementById('t-mpid').textContent = paymentId ? `MP ID: ${paymentId}` : '';
+  document.getElementById('t-items').innerHTML=items.map(it=>
+    `<div class="tkit">
+      <div class="tkil">
+        <div class="tkin">${it.emoji} ${it.nombre}</div>
+        ${it.promo_desc?`<div class="tkipro">${it.promo_desc}</div>`:''}
+        <div class="tkiq">x${it.qty}</div>
+      </div>
+      <div class="tkipr">${fmt(it.precio*it.qty)}</div>
+    </div>`
+  ).join('');
+  const pat=[1,1,1,0,1,0,1,1,0,1,1,0,1,0,1,0,0,1,1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,1,1,0];
+  document.getElementById('t-qr').innerHTML=
+    pat.map(c=>`<div class="tkqrc" style="background:${c?'#111':'transparent'}"></div>`).join('');
+
+  // Limpiar estado pendiente
+  S.pendingCart=null; S.pendingTotal=0; S.pendingEf=0; S._mpPaymentId=null;
+  show('s-ticket');
+}
+
+function nuevaOrden() {
+  S.cart={}; S.pagoMetodo=null;
+  document.querySelectorAll('.po').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('comr').style.display='none';
+  document.getElementById('com-ef').value='';
+  document.getElementById('com-dig').value='';
+  if(document.getElementById('btn-login'))
+    document.getElementById('btn-login').disabled=false;
+  renderCat('Todos'); renderCart(); updBtn();
+  show('s-pos');
+}
+function simImprimir(){toast('🖨 Enviando a impresora…');setTimeout(nuevaOrden,1800);}
+
+/* ══ Historial / Devoluciones ══ */
+async function loadHist() {
+  show('s-hist');
+  const el=document.getElementById('h-list');
+  el.innerHTML='<div style="color:var(--mu);font-size:13px;padding:20px 0;text-align:center">Cargando…</div>';
+  let ordenes=S.ordenesTurno;
+  if(!ordenes.length&&S.cajeroDbId){
+    const{data}=await sb.from('ordenes').select('*')
+      .eq('cajero_id',S.cajeroDbId).order('created_at',{ascending:false}).limit(50);
+    ordenes=data||[]; S.ordenesTurno=ordenes;
+  }
+  if(!ordenes.length){
+    el.innerHTML='<div style="color:var(--mu);font-size:13px;padding:20px 0;text-align:center">Sin órdenes en este turno</div>';
+    return;
+  }
+  el.innerHTML=ordenes.map(o=>{
+    const isPag=o.estado==='pagada';
+    return`<div class="hitem">
+      <div class="hirow">
+        <span class="hinum">#${o.numero_orden}</span>
+        <span class="hest ${isPag?'pag':'dev'}">${isPag?'Pagada':'Devuelta'}</span>
+      </div>
+      <div class="hiinfo">
+        ${horaf(o.created_at)} · ${o.metodo_pago}<br>
+        ${(o.items||[]).map(it=>`${it.emoji} ${it.nombre} x${it.qty}`).join(' · ')}
+      </div>
+      ${o.mp_payment_id?`<div class="himpid">MP ID: ${o.mp_payment_id}</div>`:''}
+      <div class="hitot">${fmt(o.total)}</div>
+      ${isPag
+        ?`<button class="bdev" onclick="devolver('${o.id}','${o.numero_orden}')">↩ Devolver esta orden</button>`
+        :`<button class="bdev" disabled>Ya devuelta</button>`
+      }
+    </div>`;
+  }).join('');
+}
+
+async function devolver(ordenId, numOrden) {
+  if(!confirm(`¿Confirmar devolución de la orden #${numOrden}?\nEsta acción queda registrada.`)) return;
+  try {
+    await sb.from('ordenes').update({estado:'devuelta'}).eq('id',ordenId);
+    const idx=S.ordenesTurno.findIndex(o=>o.id===ordenId);
+    if(idx>=0) S.ordenesTurno[idx].estado='devuelta';
+    S.txDev++;
+    toast('✓ Devolución registrada correctamente');
+    loadHist();
+  } catch(e){toast('Error al registrar la devolución');console.error(e);}
+}
+
+/* ══ Cierre ══ */
+function showCierre() {
+  document.getElementById('cc-caj').textContent=S.cajero;
+  document.getElementById('cc-st').textContent=S.stand;
+  document.getElementById('cc-ent').textContent=
+    S.loginTime?S.loginTime.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'—';
+  document.getElementById('cc-tx').textContent=S.txCount;
+  document.getElementById('cc-dev').textContent=S.txDev;
+  document.getElementById('cc-tot').textContent=fmtR(S.txTotal);
+  document.getElementById('cc-dig').textContent=fmt(S.txDigital);
+  document.getElementById('cc-ef').textContent=fmt(S.txEfectivo);
+  const items=Object.values(S.ventasProd).sort((a,b)=>b.total-a.total);
+  document.getElementById('cc-prods').innerHTML=items.length
+    ?items.map(v=>`<div class="cvi">
+        <div style="display:flex;align-items:center;gap:6px">${v.emoji} ${v.name} <span style="color:var(--mu)">x${v.qty}</span></div>
+        <div>${fmt(v.total)}</div>
+      </div>`).join('')
+    :'<div style="color:var(--mu);font-size:13px;padding:8px 0">Sin ventas aún</div>';
+  show('s-cierre');
+}
+
+async function cerrarTurno() {
+  if(!confirm(`¿Cerrar turno de ${S.cajero}?\nTotal: ${fmt(S.txTotal)} · ${S.txCount} transacciones`)) return;
+  try {
+    if(S.cajeroDbId) await sb.from('cajeros').update({
+      activo:false, hora_cierre:new Date().toISOString(),
+      total_ventas:S.txTotal, total_tx:S.txCount,
+      total_digital:S.txDigital, total_efectivo:S.txEfectivo,
+    }).eq('id',S.cajeroDbId);
+  } catch(e){console.warn(e);}
+  toast('✓ Turno cerrado. ¡Hasta la próxima!');
+  setTimeout(()=>{
+    Object.assign(S,{cart:{},pagoMetodo:null,txTotal:0,txCount:0,
+      txDigital:0,txEfectivo:0,txDev:0,ventasProd:{},
+      cajeroDbId:null,ordenesTurno:[],pendingCart:null});
+    show('s-login');
+    document.getElementById('btn-login').disabled=false;
+    document.getElementById('btn-login').textContent='Entrar al turno';
+  }, 1500);
+}
+
+async function doLogout() {
+  if(Object.keys(S.cart).length>0){toast('Terminá la orden primero');return;}
+  if(!confirm('¿Salir del turno? El turno quedará cerrado en el sistema.')) return;
+  if(S.cajeroDbId) {
+    try {
+      await sb.from('cajeros').update({
+        activo:false, hora_cierre:new Date().toISOString(),
+        total_ventas:S.txTotal, total_tx:S.txCount,
+        total_digital:S.txDigital, total_efectivo:S.txEfectivo,
+      }).eq('id',S.cajeroDbId);
+    } catch(e){ console.warn(e); }
+    S.cajeroDbId = null;
+  }
+  show('s-login');
+  document.getElementById('btn-login').disabled=false;
+  document.getElementById('btn-login').textContent='Entrar al turno';
+}
+
+// Marcar cajero como inactivo si cierra el navegador/pestaña sin hacer cierre formal
+window.addEventListener('beforeunload', () => {
+  if(S.cajeroDbId) {
+    fetch(`${SUPABASE_URL}/rest/v1/cajeros?id=eq.${S.cajeroDbId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        activo:false, hora_cierre:new Date().toISOString(),
+        total_ventas:S.txTotal, total_tx:S.txCount,
+        total_digital:S.txDigital, total_efectivo:S.txEfectivo,
+      }),
+      keepalive: true,
+    }).catch(()=>{});
+  }
+});
+
+/* ══ Toast ══ */
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+/* ══ Event listeners ══ */
+document.getElementById('btn-hist').addEventListener('click', loadHist);
+document.getElementById('btn-cierre').addEventListener('click', showCierre);
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+
+/* ══ Boot ══ */
+init();
+show('s-login');
+</script>
+</body>
+</html>

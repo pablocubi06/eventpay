@@ -1,0 +1,20 @@
+{
+  "name": "EventPay Cajero",
+  "short_name": "EventPay",
+  "description": "Sistema de punto de venta para eventos con Mercado Pago",
+  "start_url": "/cajero.html",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#0f0f13",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%237c6cf8'/><text x='50%' y='58%' font-size='100' text-anchor='middle' dominant-baseline='middle'>🎟</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance"],
+  "lang": "es-AR"
+}

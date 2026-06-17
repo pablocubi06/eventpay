@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventPay — Acceso Admin</title>
+<script src="js/config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--bg2:#fff;--border:rgba(0,0,0,.1);
+  --text:#1a1a1a;--muted:#666;--accent:#7c6cf8;
+  --red:#dc2626;--radius:12px;--rsm:8px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{width:100%;max-width:380px;padding:20px}
+.box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.logo{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.logo span{color:var(--accent)}
+.logo-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:6px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.field{position:relative;margin-bottom:14px}
+.field input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;transition:border .15s;color:var(--text);background:var(--bg2)}
+.field input:focus{border-color:var(--accent)}
+.btn{width:100%;padding:11px;border-radius:var(--rsm);border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;margin-top:4px}
+.btn:hover{background:#6557e8}
+.btn:active{transform:scale(.99)}
+.error{font-size:12px;color:var(--red);margin-top:10px;min-height:18px}
+.footer{font-size:11px;color:var(--muted);margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="box">
+    <div class="logo"><span class="logo-dot"></span>Event<span>Pay</span></div>
+    <div class="sub">Panel de administración</div>
+    <div class="field">
+      <input type="password" id="pwd" placeholder="Contraseña" autocomplete="current-password" autofocus>
+    </div>
+    <button class="btn" onclick="login()">Ingresar</button>
+    <div class="error" id="err"></div>
+    <div class="footer">Solo para administradores del evento</div>
+  </div>
+</div>
+<script>
+if (sessionStorage.getItem('ep_admin') === 'ok') location.href = 'admin.html';
+
+document.getElementById('pwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+function login() {
+  const pwd = document.getElementById('pwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    sessionStorage.setItem('ep_admin', 'ok');
+    location.href = 'admin.html';
+  } else {
+    document.getElementById('err').textContent = 'Contraseña incorrecta. Intentá de nuevo.';
+    document.getElementById('pwd').value = '';
+    document.getElementById('pwd').focus();
+  }
+}
+</script>
+</body>
+</html>

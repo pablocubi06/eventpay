@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventPay — Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--bg2:#fff;--bg3:#eeecea;
+  --border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.18);
+  --text:#1a1a1a;--muted:#666;--faint:#aaa;
+  --accent:#7c6cf8;--accent2:#ede9fe;
+  --green:#059669;--green-bg:#d1fae5;
+  --amber:#b45309;--amber-bg:#fef3c7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --radius:10px;--rsm:7px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-size:16px;font-weight:700;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.logo span{color:var(--accent)}
+.nav{display:flex;gap:2px}
+.navbtn{padding:6px 14px;border-radius:var(--rsm);border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s}
+.navbtn.active{background:var(--bg3);color:var(--text);font-weight:500}
+.navbtn:hover:not(.active){background:var(--bg3)}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LAYOUT */
+.page{display:none;padding:24px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+.page-title{font-size:20px;font-weight:600;margin-bottom:20px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.metric-value{font-size:26px;font-weight:600;margin-bottom:2px}
+.metric-sub{font-size:11px;color:var(--faint)}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:500}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:500;color:var(--muted);text-align:left;padding:8px 0;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px}
+td{font-size:13px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+tr:last-child td{border:none}
+tr:hover td{background:var(--bg)}
+
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.chip-green{background:var(--green-bg);color:var(--green)}
+.chip-amber{background:var(--amber-bg);color:var(--amber)}
+.chip-red{background:var(--red-bg);color:var(--red)}
+.chip-blue{background:var(--accent2);color:var(--accent)}
+.chip-gray{background:var(--bg3);color:var(--muted)}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:var(--bg3)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#6557e8;border-color:#6557e8}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-danger:hover{background:#b91c1c}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:var(--muted)}
+.form-input{padding:8px 10px;border-radius:var(--rsm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none;transition:border .15s;width:100%}
+.form-input:focus{border-color:var(--accent)}
+select.form-input{cursor:pointer}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border-radius:var(--radius);padding:24px;width:460px;max-width:95vw}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* CHART */
+canvas{width:100%!important}
+
+/* ACTIVITY FEED */
+.activity-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.activity-item:last-child{border:none}
+.ai-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ai-icon.sale{background:#d1fae5;color:#059669}
+.ai-icon.login{background:var(--accent2);color:var(--accent)}
+.ai-info{flex:1}
+.ai-main{font-size:13px;font-weight:500}
+.ai-sub{font-size:11px;color:var(--muted)}
+.ai-amount{font-size:13px;font-weight:600;color:var(--green)}
+
+/* STANDS */
+.stand-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.stand-row:last-child{border:none}
+.stand-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.stand-info{flex:1}
+.stand-name{font-size:13px;font-weight:500}
+.stand-cajero{font-size:11px;color:var(--muted)}
+.stand-total{font-size:13px;font-weight:600}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:300;transform:translateY(60px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* SELECTOR DE EVENTO */
+#ev-picker{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+#ev-picker.hidden{display:none}
+.evp-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:32px;width:520px;max-width:100%}
+.evp-title{font-size:18px;font-weight:600;margin-bottom:6px}
+.evp-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.evp-list{display:flex;flex-direction:column;gap:10px}
+.evp-card{border:2px solid var(--border);border-radius:var(--radius);padding:16px 18px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
+.evp-card:hover{border-color:var(--accent);background:var(--accent2)}
+.evp-name{font-size:15px;font-weight:600}
+.evp-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.evp-arrow{font-size:18px;color:var(--accent)}
+
+@media(max-width:700px){.grid-2{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>Event<span>Pay</span> <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">Admin</span></div>
+  <div class="nav">
+    <button class="navbtn active" onclick="goPage('dashboard',this)">Dashboard</button>
+    <button class="navbtn" onclick="goPage('catalogo',this)">Catálogo</button>
+    <button class="navbtn" onclick="goPage('cajeros',this)">Cajeros</button>
+    <button class="navbtn" onclick="goPage('ordenes',this)">Órdenes</button>
+    <button class="navbtn" onclick="goPage('config',this)">⚙️ Configuración</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="live-badge" onclick="mostrarSelectorEvento()" title="Cambiar evento" style="cursor:pointer">
+      <div class="live-dot"></div><span id="lb-evento">Cargando…</span>
+      <span style="font-size:11px;color:var(--faint);margin-left:4px">▾</span>
+    </div>
+    <button class="btn btn-sm" onclick="logout()" style="color:var(--muted)">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- ══ SELECTOR DE EVENTO ══ -->
+<div id="ev-picker">
+  <div class="evp-box">
+    <div class="evp-title">Seleccioná un evento</div>
+    <div class="evp-sub">¿Con qué evento querés trabajar hoy?</div>
+    <div class="evp-list" id="evp-list"></div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-title">Dashboard en vivo</div>
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Recaudación total</div>
+      <div class="metric-value" id="m-total">$0</div>
+      <div class="metric-sub" id="m-total-sub">del evento</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Órdenes</div>
+      <div class="metric-value" id="m-ordenes">0</div>
+      <div class="metric-sub">transacciones</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Cajeros activos</div>
+      <div class="metric-value" id="m-cajeros">0</div>
+      <div class="metric-sub">en turno ahora</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Ticket promedio</div>
+      <div class="metric-value" id="m-ticket">$0</div>
+      <div class="metric-sub">por orden</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Ventas por stand</span></div>
+      <div id="dash-stands"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Actividad reciente</span></div>
+      <div id="dash-activity"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Productos más vendidos</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div id="dash-top-prods"></div>
+      <div><canvas id="chart-prods" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Medios de pago</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px" id="dash-metodos"></div>
+  </div>
+</div>
+
+<!-- ══ CATÁLOGO ══ -->
+<div class="page" id="page-catalogo">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div class="page-title" style="margin:0">Catálogo de productos</div>
+    <button class="btn btn-primary" onclick="openModalProd()">+ Nuevo producto</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="cat-filter-tabs"></div>
+    <table>
+      <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="cat-table"></tbody>
+    </table>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px">
+    💡 Cualquier cambio se refleja automáticamente en todos los posnet en menos de 1 segundo.
+  </div>
+</div>
+
+<!-- ══ CAJEROS ══ -->
+<div class="page" id="page-cajeros">
+  <div class="page-title">Cajeros y turnos</div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Turnos activos ahora</span></div>
+    <div id="cajeros-activos"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Historial de turnos</span></div>
+    <table>
+      <thead><tr><th>Cajero</th><th>Stand</th><th>Entrada</th><th>Cierre</th><th>Transacciones</th><th>Total</th><th>Estado</th></tr></thead>
+      <tbody id="cajeros-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ ÓRDENES ══ -->
+<div class="page" id="page-ordenes">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div class="page-title" style="margin:0">Órdenes del evento</div>
+    <button class="btn" onclick="exportCSV()">↓ Exportar CSV</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>Hora</th><th>Cajero / Stand</th><th>Productos</th><th>Medio</th><th>Total</th><th>Estado</th></tr></thead>
+      <tbody id="ordenes-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ CONFIGURACIÓN ══ -->
+<div class="page" id="page-config">
+  <div class="page-title">⚙️ Configuración del sistema</div>
+
+  <!-- EVENTOS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📅 Eventos</span>
+      <button class="btn btn-primary btn-sm" onclick="openModalEvento()">+ Nuevo evento</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre del evento</th>
+          <th>Fecha</th>
+          <th>Lugar</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="cfg-eventos-table"></tbody>
+    </table>
+  </div>
+
+  <!-- STANDS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🏪 Stands / Barras</span>
+      <button class="btn btn-primary btn-sm" onclick="openModalStand()">+ Nuevo stand</button>
+    </div>
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--muted)">Filtrar por evento:</span>
+      <select class="form-input" id="cfg-stands-evento-filter" style="max-width:240px" onchange="renderCfgStands()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Stand / Barra</th>
+          <th>Evento</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="cfg-stands-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo/editar Evento -->
+<div class="modal-bg" id="modal-evento">
+  <div class="modal">
+    <div class="modal-title" id="mev-title">Nuevo evento</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre del evento</label>
+        <input class="form-input" id="fev-nombre" placeholder="Ej: Festival Verano 2025">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input class="form-input" type="date" id="fev-fecha">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Lugar / Venue</label>
+      <input class="form-input" id="fev-lugar" placeholder="Ej: Predio La Rural">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Estado</label>
+      <select class="form-input" id="fev-activo">
+        <option value="true">✅ Activo (visible para cajeros)</option>
+        <option value="false">⏸ Inactivo</option>
+      </select>
+    </div>
+    <input type="hidden" id="fev-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-evento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEvento()">Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo/editar Stand -->
+<div class="modal-bg" id="modal-stand">
+  <div class="modal">
+    <div class="modal-title" id="mst-title">Nuevo stand</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Evento al que pertenece</label>
+      <select class="form-input" id="fst-evento">
+        <option value="">— Seleccioná un evento —</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre del stand / barra</label>
+        <input class="form-input" id="fst-nombre" placeholder="Ej: Bar Principal">
+      </div>
+      <div class="form-group">
+        <label>Estado</label>
+        <select class="form-input" id="fst-activo">
+          <option value="true">✅ Activo</option>
+          <option value="false">⏸ Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="fst-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-stand')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveStand()">Guardar stand</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Producto -->
+<div class="modal-bg" id="modal-prod">
+  <div class="modal">
+    <div class="modal-title" id="mprod-title">Nuevo producto</div>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre</label><input class="form-input" id="fp-nombre" placeholder="Ej: Fernet c/Coca"></div>
+      <div class="form-group"><label>Precio</label><input class="form-input" type="number" id="fp-precio" placeholder="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Categoría</label>
+        <select class="form-input" id="fp-cat">
+          <option>Tragos</option><option>Cervezas</option><option>Sin alcohol</option><option>Promos</option><option>Botellería</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Emoji</label><input class="form-input" id="fp-emoji" placeholder="🍺" style="max-width:80px"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>¿Es promo?</label>
+        <select class="form-input" id="fp-promo" onchange="togglePromoDesc()">
+          <option value="false">No</option><option value="true">Sí</option>
+        </select>
+      </div>
+      <div class="form-group" id="fp-promog" style="display:none">
+        <label>Descripción de la promo</label>
+        <input class="form-input" id="fp-promodesc" placeholder="Vale por 2 Fernets">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Disponible en posnet</label>
+      <select class="form-input" id="fp-disp"><option value="true">Sí</option><option value="false">No</option></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Imagen del producto (opcional)</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img id="fp-img-preview" src="" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:none">
+        <div style="flex:1">
+          <input class="form-input" type="file" id="fp-img-file" accept="image/*" onchange="previewImg(this)" style="font-size:12px;padding:6px">
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">JPG, PNG o WEBP · máx 2 MB</div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="fp-id">
+    <input type="hidden" id="fp-img-url">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-prod')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-prod" onclick="saveProd()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Auth guard — redirigir a login si no está autenticado
+if (sessionStorage.getItem('ep_admin') !== 'ok') location.href = 'login.html';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function logout() {
+  sessionStorage.removeItem('ep_admin');
+  location.href = 'login.html';
+}
+
+const A = {
+  eventoId: null, evento: null,
+  productos: [], ordenes: [], cajeros: [], stands: [],
+};
+
+const fmt    = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtRaw = n => Math.round(n).toLocaleString('es-AR');
+const horaf  = iso => new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+const fechaf = iso => new Date(iso).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+
+function goPage(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='catalogo')  renderCatalogo();
+  if(id==='cajeros')   renderCajeros();
+  if(id==='ordenes')   renderOrdenes();
+  if(id==='config')    { populateEventoSelects(); renderCfgEventos(); renderCfgStands(); }
+}
+
+/* ── Init ── */
+async function init(){
+  await sb.storage.createBucket('productos', { public: true }).catch(()=>{});
+  await loadConfigData();
+  mostrarSelectorEvento();
+}
+
+function mostrarSelectorEvento(){
+  const picker = document.getElementById('ev-picker');
+  const list   = document.getElementById('evp-list');
+  picker.classList.remove('hidden');
+
+  if(!A_eventos_all.length){
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">No hay eventos creados.<br>Andá a ⚙️ Configuración → Eventos para crear uno.</div>';
+    return;
+  }
+
+  list.innerHTML = A_eventos_all.map(e => `
+    <div class="evp-card" onclick="elegirEvento('${e.id}')">
+      <div>
+        <div class="evp-name">${e.nombre}</div>
+        <div class="evp-meta">
+          ${e.fecha ? new Date(e.fecha+'T12:00').toLocaleDateString('es-AR') : 'Sin fecha'}
+          ${e.lugar ? ' · ' + e.lugar : ''}
+          · <span style="color:${e.activo?'var(--green)':'var(--faint)'}">${e.activo?'Activo':'Inactivo'}</span>
+        </div>
+      </div>
+      <div class="evp-arrow">→</div>
+    </div>`
+  ).join('');
+}
+
+async function elegirEvento(id){
+  const ev = A_eventos_all.find(e => e.id === id);
+  if(!ev) return;
+  A.evento = ev; A.eventoId = id;
+  document.getElementById('lb-evento').textContent = ev.nombre;
+  document.getElementById('ev-picker').classList.add('hidden');
+
+  await Promise.all([loadProductos(), loadOrdenes(), loadCajeros(), loadStands()]);
+
+  // Asegurarse de que el dashboard quede activo al entrar
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-dashboard').classList.add('active');
+  document.querySelector('.navbtn').classList.add('active');
+
+  renderDashboard();
+  subscribeAll();
+}
+
+async function loadProductos(){
+  const {data} = await sb.from('productos').select('*').eq('evento_id',A.eventoId).order('orden');
+  A.productos = data||[];
+}
+async function loadOrdenes(){
+  const {data} = await sb.from('ordenes').select('*').eq('evento_id',A.eventoId).order('created_at',{ascending:false}).limit(200);
+  A.ordenes = data||[];
+}
+async function loadCajeros(){
+  const {data} = await sb.from('cajeros').select('*').eq('evento_id',A.eventoId).order('hora_entrada',{ascending:false});
+  A.cajeros = data||[];
+}
+async function loadStands(){
+  const {data} = await sb.from('stands').select('*').eq('evento_id',A.eventoId);
+  A.stands = data||[];
+}
+
+/* ── Realtime subscriptions ── */
+function subscribeAll(){
+  // Limpiar suscripciones anteriores al cambiar de evento
+  sb.removeAllChannels();
+  // Nuevas órdenes → actualizar dashboard en vivo
+  sb.channel('admin-ordenes')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ordenes',filter:`evento_id=eq.${A.eventoId}`},
+      payload=>{
+        A.ordenes.unshift(payload.new);
+        const activePage = document.querySelector('.page.active').id;
+        if(activePage==='page-dashboard') renderDashboard();
+        if(activePage==='page-ordenes')   renderOrdenes();
+        toast(`✓ Nueva orden #${payload.new.numero_orden} · ${fmt(payload.new.total)}`);
+      })
+    .subscribe();
+
+  // Cambios en cajeros
+  sb.channel('admin-cajeros')
+    .on('postgres_changes',{event:'*',schema:'public',table:'cajeros',filter:`evento_id=eq.${A.eventoId}`},
+      async ()=>{
+        await loadCajeros();
+        const activePage = document.querySelector('.page.active').id;
+        if(activePage==='page-dashboard') renderDashboard();
+        if(activePage==='page-cajeros')   renderCajeros();
+      })
+    .subscribe();
+
+  // Cambios en productos
+  sb.channel('admin-productos')
+    .on('postgres_changes',{event:'*',schema:'public',table:'productos',filter:`evento_id=eq.${A.eventoId}`},
+      async ()=>{ await loadProductos(); if(document.querySelector('.page.active').id==='page-catalogo') renderCatalogo(); })
+    .subscribe();
+}
+
+/* ══ DASHBOARD ══ */
+let chartProds = null;
+function renderDashboard(){
+  const ordPagadas = A.ordenes.filter(o=>o.estado==='pagada');
+  const total  = ordPagadas.reduce((s,o)=>s+parseFloat(o.total),0);
+  const count  = ordPagadas.length;
+  const activos= A.cajeros.filter(c=>c.activo).length;
+  const ticket = count>0?total/count:0;
+
+  document.getElementById('m-total').textContent   = fmt(total);
+  document.getElementById('m-ordenes').textContent = count;
+  document.getElementById('m-cajeros').textContent = activos;
+  document.getElementById('m-ticket').textContent  = fmt(ticket);
+
+  // Ventas por stand
+  const byStand = {};
+  ordPagadas.forEach(o=>{
+    if(!byStand[o.stand_nombre]) byStand[o.stand_nombre]={total:0,count:0};
+    byStand[o.stand_nombre].total+=parseFloat(o.total);
+    byStand[o.stand_nombre].count++;
+  });
+  const standEl = document.getElementById('dash-stands');
+  standEl.innerHTML = Object.entries(byStand).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>{
+    const caj = A.cajeros.find(c=>c.stand_nombre===name&&c.activo);
+    return `<div class="stand-row">
+      <div class="stand-dot" style="background:${caj?'#22c55e':'#d1d5db'}"></div>
+      <div class="stand-info"><div class="stand-name">${name}</div><div class="stand-cajero">${caj?caj.nombre:'Sin cajero activo'} · ${d.count} órdenes</div></div>
+      <div class="stand-total">${fmt(d.total)}</div>
+    </div>`;
+  }).join('')||'<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin datos aún</div>';
+
+  // Actividad reciente
+  const actEl = document.getElementById('dash-activity');
+  actEl.innerHTML = A.ordenes.slice(0,8).map(o=>
+    `<div class="activity-item">
+      <div class="ai-icon sale">✓</div>
+      <div class="ai-info">
+        <div class="ai-main">#${o.numero_orden} · ${o.cajero_nombre} · ${o.stand_nombre}</div>
+        <div class="ai-sub">${horaf(o.created_at)} · ${o.metodo_pago}</div>
+      </div>
+      <div class="ai-amount">${fmt(o.total)}</div>
+    </div>`
+  ).join('')||'<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin órdenes aún</div>';
+
+  // Top productos (desde items JSON)
+  const byProd = {};
+  ordPagadas.forEach(o=>{
+    (o.items||[]).forEach(it=>{
+      if(!byProd[it.nombre]) byProd[it.nombre]={emoji:it.emoji,qty:0,total:0};
+      byProd[it.nombre].qty+=it.qty;
+      byProd[it.nombre].total+=it.precio*it.qty;
+    });
+  });
+  const topProds = Object.entries(byProd).sort((a,b)=>b[1].total-a[1].total).slice(0,6);
+  document.getElementById('dash-top-prods').innerHTML = topProds.map(([name,d])=>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px">
+      <span>${d.emoji} ${name} <span style="color:var(--muted)">x${d.qty}</span></span>
+      <span style="font-weight:600">${fmt(d.total)}</span>
+    </div>`
+  ).join('')||'<div style="color:var(--muted);font-size:13px">Sin datos</div>';
+
+  // Gráfico de productos
+  if(topProds.length){
+    const ctx = document.getElementById('chart-prods').getContext('2d');
+    if(chartProds) chartProds.destroy();
+    chartProds = new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        labels:topProds.map(([n])=>n),
+        datasets:[{data:topProds.map(([,d])=>d.total),backgroundColor:['#7c6cf8','#22c55e','#f59e0b','#ef4444','#06b6d4','#8b5cf6'],borderWidth:0}]
+      },
+      options:{plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},cutout:'65%'}
+    });
+  }
+
+  // Medios de pago
+  const byMetodo = {tarjeta:0,qr:0,efectivo:0,combinado:0};
+  ordPagadas.forEach(o=>{ if(byMetodo[o.metodo_pago]!==undefined) byMetodo[o.metodo_pago]+=parseFloat(o.total); });
+  const metNames={tarjeta:{label:'Tarjeta',icon:'💳'},qr:{label:'QR / MP',icon:'📲'},efectivo:{label:'Efectivo',icon:'💵'},combinado:{label:'Combinado',icon:'🔀'}};
+  document.getElementById('dash-metodos').innerHTML = Object.entries(byMetodo).map(([k,v])=>
+    `<div style="background:var(--bg3);border-radius:var(--rsm);padding:14px;text-align:center">
+      <div style="font-size:22px;margin-bottom:4px">${metNames[k].icon}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${metNames[k].label}</div>
+      <div style="font-size:16px;font-weight:600">${fmt(v)}</div>
+    </div>`
+  ).join('');
+}
+
+/* ══ CATÁLOGO ══ */
+let catFiltro = 'Todos';
+function renderCatalogo(){
+  const cats = ['Todos',...new Set(A.productos.map(p=>p.categoria))];
+  document.getElementById('cat-filter-tabs').innerHTML = cats.map(c=>
+    `<button class="btn btn-sm${c===catFiltro?' btn-primary':''}" onclick="setCatFiltro('${c}')">${c}</button>`
+  ).join('');
+  const list = catFiltro==='Todos'?A.productos:A.productos.filter(p=>p.categoria===catFiltro);
+  document.getElementById('cat-table').innerHTML = list.map(p=>
+    `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${p.imagen_url
+            ? `<img src="${p.imagen_url}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">`+`<span style="font-size:22px;line-height:1;display:none">${p.emoji}</span>`
+            : `<span style="font-size:22px;line-height:1">${p.emoji}</span>`}
+          <span>${p.nombre}</span>
+        </div>
+      </td>
+      <td><span class="chip chip-blue">${p.categoria}</span></td>
+      <td style="font-weight:600">${fmt(p.precio)}</td>
+      <td>${p.es_promo?`<span class="chip chip-amber">PROMO · ${p.promo_desc||''}</span>`:'<span class="chip chip-gray">Normal</span>'}</td>
+      <td><span class="chip ${p.disponible?'chip-green':'chip-red'}">${p.disponible?'Activo':'Oculto'}</span></td>
+      <td style="display:flex;gap:6px;padding-top:10px;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick='editProd(${JSON.stringify(p)})'>Editar</button>
+        <button class="btn btn-sm" onclick="toggleDisp('${p.id}',${!p.disponible})">${p.disponible?'Ocultar':'Mostrar'}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteProd('${p.id}')">Eliminar</button>
+      </td>
+    </tr>`
+  ).join('');
+}
+function setCatFiltro(c){catFiltro=c;renderCatalogo();}
+
+function openModalProd(){
+  document.getElementById('mprod-title').textContent='Nuevo producto';
+  ['fp-nombre','fp-precio','fp-emoji','fp-promodesc','fp-id','fp-img-url'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fp-img-file').value='';
+  document.getElementById('fp-img-preview').style.display='none';
+  document.getElementById('fp-promo').value='false';
+  document.getElementById('fp-disp').value='true';
+  document.getElementById('fp-promog').style.display='none';
+  openModal('modal-prod');
+}
+function editProd(p){
+  document.getElementById('mprod-title').textContent='Editar producto';
+  document.getElementById('fp-id').value=p.id;
+  document.getElementById('fp-nombre').value=p.nombre;
+  document.getElementById('fp-precio').value=p.precio;
+  document.getElementById('fp-cat').value=p.categoria;
+  document.getElementById('fp-emoji').value=p.emoji;
+  document.getElementById('fp-promo').value=String(p.es_promo);
+  document.getElementById('fp-promodesc').value=p.promo_desc||'';
+  document.getElementById('fp-disp').value=String(p.disponible);
+  document.getElementById('fp-promog').style.display=p.es_promo?'flex':'none';
+  document.getElementById('fp-img-url').value=p.imagen_url||'';
+  document.getElementById('fp-img-file').value='';
+  const prev=document.getElementById('fp-img-preview');
+  if(p.imagen_url){prev.src=p.imagen_url;prev.style.display='block';}
+  else{prev.style.display='none';}
+  openModal('modal-prod');
+}
+function previewImg(input){
+  const prev=document.getElementById('fp-img-preview');
+  if(input.files&&input.files[0]){
+    prev.src=URL.createObjectURL(input.files[0]);
+    prev.style.display='block';
+  }
+}
+function togglePromoDesc(){
+  document.getElementById('fp-promog').style.display=
+    document.getElementById('fp-promo').value==='true'?'flex':'none';
+}
+async function saveProd(){
+  const id     = document.getElementById('fp-id').value;
+  const nombre = document.getElementById('fp-nombre').value.trim();
+  const precio = parseFloat(document.getElementById('fp-precio').value);
+  if(!nombre||!precio){toast('Completá nombre y precio');return;}
+
+  // Subir imagen si seleccionaron una
+  let imagen_url = document.getElementById('fp-img-url').value || null;
+  const file = document.getElementById('fp-img-file').files[0];
+  if(file){
+    const btn = document.getElementById('btn-save-prod');
+    btn.textContent = 'Subiendo imagen…'; btn.disabled = true;
+    const ext  = file.name.split('.').pop();
+    const path = `${Date.now()}.${ext}`;
+    const {data:up, error:upErr} = await sb.storage.from('productos').upload(path, file, {upsert:true});
+    btn.textContent = 'Guardar'; btn.disabled = false;
+    if(upErr){ toast('Error al subir imagen: ' + upErr.message); return; }
+    const {data:{publicUrl}} = sb.storage.from('productos').getPublicUrl(path);
+    imagen_url = publicUrl;
+  }
+
+  const data = {
+    nombre, precio, imagen_url,
+    categoria:document.getElementById('fp-cat').value,
+    emoji:document.getElementById('fp-emoji').value||'📦',
+    es_promo:document.getElementById('fp-promo').value==='true',
+    promo_desc:document.getElementById('fp-promodesc').value||null,
+    disponible:document.getElementById('fp-disp').value==='true',
+    evento_id:A.eventoId,
+  };
+  if(id){ await sb.from('productos').update(data).eq('id',id); toast('✓ Producto actualizado'); }
+  else   { await sb.from('productos').insert({...data,orden:A.productos.length+1}); toast('✓ Producto creado'); }
+  closeModal('modal-prod');
+  await loadProductos();
+  renderCatalogo();
+}
+async function toggleDisp(id,val){
+  await sb.from('productos').update({disponible:val}).eq('id',id);
+  await loadProductos(); renderCatalogo();
+  toast(val?'✓ Producto visible':'Producto ocultado');
+}
+async function deleteProd(id){
+  if(!confirm('¿Eliminar este producto del catálogo?')) return;
+  await sb.from('productos').delete().eq('id',id);
+  await loadProductos(); renderCatalogo(); toast('Producto eliminado');
+}
+
+/* ══ CAJEROS ══ */
+function renderCajeros(){
+  const activos = A.cajeros.filter(c=>c.activo);
+  document.getElementById('cajeros-activos').innerHTML = activos.length
+    ? activos.map(c=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${c.nombre}</div>
+          <div style="font-size:11px;color:var(--muted)">${c.stand_nombre} · desde ${horaf(c.hora_entrada)}</div>
+        </div>
+        <div style="font-size:13px;font-weight:600">${fmt(c.total_ventas||0)}</div>
+        <span class="chip chip-green">Activo</span>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0">No hay cajeros en turno</div>';
+
+  document.getElementById('cajeros-table').innerHTML = A.cajeros.map(c=>
+    `<tr>
+      <td style="font-weight:500">${c.nombre}</td>
+      <td>${c.stand_nombre}</td>
+      <td>${horaf(c.hora_entrada)}</td>
+      <td>${c.hora_cierre?horaf(c.hora_cierre):'—'}</td>
+      <td>${c.total_tx||0}</td>
+      <td style="font-weight:600">${fmt(c.total_ventas||0)}</td>
+      <td><span class="chip ${c.activo?'chip-green':'chip-gray'}">${c.activo?'Activo':'Cerrado'}</span></td>
+    </tr>`
+  ).join('');
+}
+
+/* ══ ÓRDENES ══ */
+function renderOrdenes(){
+  const metIcons={tarjeta:'💳',qr:'📲',efectivo:'💵',combinado:'🔀'};
+  document.getElementById('ordenes-table').innerHTML = A.ordenes.map(o=>
+    `<tr>
+      <td style="font-weight:600">#${o.numero_orden}</td>
+      <td>${horaf(o.created_at)}</td>
+      <td>${o.cajero_nombre} · <span style="color:var(--muted)">${o.stand_nombre}</span></td>
+      <td style="font-size:12px">${(o.items||[]).map(it=>`${it.emoji}x${it.qty}`).join(' ')}</td>
+      <td>${metIcons[o.metodo_pago]||''} ${o.metodo_pago}</td>
+      <td style="font-weight:600">${fmt(o.total)}</td>
+      <td><span class="chip ${o.estado==='pagada'?'chip-green':o.estado==='anulada'?'chip-red':'chip-gray'}">${o.estado}</span></td>
+    </tr>`
+  ).join('');
+}
+
+/* ══ CONFIGURACIÓN — Eventos y Stands ══ */
+
+let A_eventos_all = []; // todos los eventos (para config)
+let A_stands_all  = []; // todos los stands (para config)
+
+async function loadConfigData() {
+  const [{ data: evs }, { data: sts }] = await Promise.all([
+    sb.from('eventos').select('*').order('created_at', { ascending: false }),
+    sb.from('stands').select('*').order('nombre'),
+  ]);
+  A_eventos_all = evs || [];
+  A_stands_all  = sts || [];
+}
+
+function renderCfgEventos() {
+  const tbody = document.getElementById('cfg-eventos-table');
+  if (!tbody) return;
+  tbody.innerHTML = A_eventos_all.map(e => `
+    <tr>
+      <td style="font-weight:500">${e.nombre}</td>
+      <td>${e.fecha ? new Date(e.fecha+'T12:00').toLocaleDateString('es-AR') : '—'}</td>
+      <td>${e.lugar || '—'}</td>
+      <td><span class="chip ${e.activo ? 'chip-green' : 'chip-gray'}">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td style="display:flex;gap:6px;padding-top:10px">
+        <button class="btn btn-sm" onclick='editEvento(${JSON.stringify(e)})'>Editar</button>
+        <button class="btn btn-sm" onclick="toggleEvento('${e.id}',${!e.activo})">${e.activo ? 'Desactivar' : 'Activar'}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteEvento('${e.id}')">✕</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted);padding:16px 0">No hay eventos creados aún</td></tr>';
+}
+
+function renderCfgStands() {
+  const filtro = document.getElementById('cfg-stands-evento-filter')?.value || '';
+  const list   = filtro ? A_stands_all.filter(s => s.evento_id === filtro) : A_stands_all;
+  const tbody  = document.getElementById('cfg-stands-table');
+  if (!tbody) return;
+  tbody.innerHTML = list.map(s => {
+    const ev = A_eventos_all.find(e => e.id === s.evento_id);
+    return `<tr>
+      <td style="font-weight:500">${s.nombre}</td>
+      <td><span class="chip chip-blue">${ev?.nombre || '—'}</span></td>
+      <td><span class="chip ${s.activo ? 'chip-green' : 'chip-gray'}">${s.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td style="display:flex;gap:6px;padding-top:10px">
+        <button class="btn btn-sm" onclick='editStand(${JSON.stringify(s)})'>Editar</button>
+        <button class="btn btn-sm" onclick="toggleStand('${s.id}',${!s.activo})">${s.activo ? 'Desactivar' : 'Activar'}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteStand('${s.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="color:var(--muted);padding:16px 0">No hay stands creados aún</td></tr>';
+}
+
+function populateEventoSelects() {
+  // Select del filtro de stands
+  const filtro = document.getElementById('cfg-stands-evento-filter');
+  if (filtro) {
+    const prev = filtro.value;
+    filtro.innerHTML = '<option value="">Todos los eventos</option>' +
+      A_eventos_all.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    filtro.value = prev;
+  }
+  // Select del modal de stand
+  const fstEv = document.getElementById('fst-evento');
+  if (fstEv) {
+    const prev2 = fstEv.value;
+    fstEv.innerHTML = '<option value="">— Seleccioná un evento —</option>' +
+      A_eventos_all.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    fstEv.value = prev2;
+  }
+}
+
+// ── Evento CRUD ──
+function openModalEvento() {
+  document.getElementById('mev-title').textContent = 'Nuevo evento';
+  document.getElementById('fev-id').value     = '';
+  document.getElementById('fev-nombre').value = '';
+  document.getElementById('fev-fecha').value  = '';
+  document.getElementById('fev-lugar').value  = '';
+  document.getElementById('fev-activo').value = 'true';
+  openModal('modal-evento');
+}
+function editEvento(e) {
+  document.getElementById('mev-title').textContent = 'Editar evento';
+  document.getElementById('fev-id').value     = e.id;
+  document.getElementById('fev-nombre').value = e.nombre;
+  document.getElementById('fev-fecha').value  = e.fecha || '';
+  document.getElementById('fev-lugar').value  = e.lugar || '';
+  document.getElementById('fev-activo').value = String(e.activo);
+  openModal('modal-evento');
+}
+async function saveEvento() {
+  const id     = document.getElementById('fev-id').value;
+  const nombre = document.getElementById('fev-nombre').value.trim();
+  if (!nombre) { toast('El nombre del evento es obligatorio'); return; }
+  const data = {
+    nombre,
+    fecha:  document.getElementById('fev-fecha').value || null,
+    lugar:  document.getElementById('fev-lugar').value.trim() || null,
+    activo: document.getElementById('fev-activo').value === 'true',
+  };
+  if (id) { await sb.from('eventos').update(data).eq('id', id); toast('✓ Evento actualizado'); }
+  else     { await sb.from('eventos').insert(data); toast('✓ Evento creado'); }
+  closeModal('modal-evento');
+  await loadConfigData();
+  populateEventoSelects();
+  renderCfgEventos();
+  renderCfgStands();
+}
+async function toggleEvento(id, val) {
+  await sb.from('eventos').update({ activo: val }).eq('id', id);
+  await loadConfigData(); populateEventoSelects(); renderCfgEventos();
+  toast(val ? '✓ Evento activado' : 'Evento desactivado');
+}
+async function deleteEvento(id) {
+  if (!confirm('¿Eliminar este evento? También se eliminarán sus stands.')) return;
+  await sb.from('eventos').delete().eq('id', id);
+  await loadConfigData(); populateEventoSelects(); renderCfgEventos(); renderCfgStands();
+  toast('Evento eliminado');
+}
+
+// ── Stand CRUD ──
+function openModalStand() {
+  document.getElementById('mst-title').textContent = 'Nuevo stand';
+  document.getElementById('fst-id').value     = '';
+  document.getElementById('fst-nombre').value = '';
+  document.getElementById('fst-activo').value = 'true';
+  populateEventoSelects();
+  // Pre-seleccionar el evento activo del admin
+  if (A.eventoId) document.getElementById('fst-evento').value = A.eventoId;
+  openModal('modal-stand');
+}
+function editStand(s) {
+  document.getElementById('mst-title').textContent = 'Editar stand';
+  document.getElementById('fst-id').value     = s.id;
+  document.getElementById('fst-nombre').value = s.nombre;
+  document.getElementById('fst-activo').value = String(s.activo);
+  populateEventoSelects();
+  document.getElementById('fst-evento').value = s.evento_id || '';
+  openModal('modal-stand');
+}
+async function saveStand() {
+  const id      = document.getElementById('fst-id').value;
+  const nombre  = document.getElementById('fst-nombre').value.trim();
+  const eventoId= document.getElementById('fst-evento').value;
+  if (!nombre)   { toast('Ingresá el nombre del stand'); return; }
+  if (!eventoId) { toast('Seleccioná un evento'); return; }
+  const data = {
+    nombre,
+    evento_id: eventoId,
+    activo: document.getElementById('fst-activo').value === 'true',
+  };
+  if (id) { await sb.from('stands').update(data).eq('id', id); toast('✓ Stand actualizado'); }
+  else     { await sb.from('stands').insert(data); toast('✓ Stand creado'); }
+  closeModal('modal-stand');
+  await loadConfigData(); renderCfgStands();
+}
+async function toggleStand(id, val) {
+  await sb.from('stands').update({ activo: val }).eq('id', id);
+  await loadConfigData(); renderCfgStands();
+  toast(val ? '✓ Stand activado' : 'Stand desactivado');
+}
+async function deleteStand(id) {
+  if (!confirm('¿Eliminar este stand?')) return;
+  await sb.from('stands').delete().eq('id', id);
+  await loadConfigData(); renderCfgStands();
+  toast('Stand eliminado');
+}
+
+function exportCSV(){
+  const rows=[['#','Hora','Cajero','Stand','Productos','Metodo','Total','Estado']];
+  A.ordenes.forEach(o=>rows.push([
+    o.numero_orden,
+    new Date(o.created_at).toLocaleString('es-AR'),
+    o.cajero_nombre, o.stand_nombre,
+    (o.items||[]).map(it=>`${it.nombre}x${it.qty}`).join('; '),
+    o.metodo_pago, o.total, o.estado
+  ]));
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+csv);
+  a.download=`eventpay-ordenes-${fechaf(new Date().toISOString())}.csv`;
+  a.click();
+  toast('✓ CSV descargado');
+}
+
+/* ── Modal helpers ── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+init();
+</script>
+</body>
+</html>
