@@ -158,7 +158,10 @@ canvas{width:100%!important}
 <!-- ══ SELECTOR DE EVENTO ══ -->
 <div id="ev-picker">
   <div class="evp-box">
-    <div class="evp-title">Seleccioná un evento</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="evp-title">Seleccioná un evento</div>
+      <button class="btn btn-primary btn-sm" onclick="openModalEvento()">+ Nuevo evento</button>
+    </div>
     <div class="evp-sub">¿Con qué evento querés trabajar hoy?</div>
     <div class="evp-list" id="evp-list"></div>
   </div>
@@ -922,6 +925,8 @@ async function saveEvento() {
   populateEventoSelects();
   renderCfgEventos();
   renderCfgStands();
+  // Si el selector está visible, refrescar la lista
+  if (!document.getElementById('ev-picker').classList.contains('hidden')) mostrarSelectorEvento();
 }
 async function toggleEvento(id, val) {
   await sb.from('eventos').update({ activo: val }).eq('id', id);
