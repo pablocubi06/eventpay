@@ -343,14 +343,7 @@ async function step3Next(){
   const slug    = document.getElementById('r-slug').value.trim();
 
   try {
-    // 1. Crear usuario en Supabase Auth
-    const { data: authData, error: authErr } = await sb.auth.signUp({
-      email, password: pass,
-      options: { data: { empresa } }
-    });
-    if(authErr) throw new Error(authErr.message);
-
-    // 2. Crear organización
+    // 1. Crear organización primero (como anon, antes del signup)
     const { data: org, error: orgErr } = await sb.from('organizations').insert({
       nombre: empresa, email, slug,
       plan: selectedPlan,
@@ -359,10 +352,18 @@ async function step3Next(){
     }).select().single();
     if(orgErr) throw new Error(orgErr.message);
 
-    // 3. Actualizar metadata del usuario con org_id
-    await sb.auth.updateUser({ data: { org_id: org.id } });
+    // 2. Crear usuario con org_id ya en metadata (evita el updateUser posterior)
+    const { error: authErr } = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { empresa, org_id: org.id } }
+    });
+    if(authErr){
+      // Revertir org si el signup falló
+      await sb.from('organizations').delete().eq('id', org.id);
+      throw new Error(authErr.message);
+    }
 
-    // 4. Mostrar éxito
+    // 3. Mostrar éxito
     const appUrl = window.location.origin + window.location.pathname.replace('registro.html','');
     document.getElementById('cajero-url').textContent = `${appUrl}cajero.html?org=${slug}`;
     goStep(4);
